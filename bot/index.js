@@ -1,13 +1,24 @@
 const baileys = require('baileys');
 const { useMultiFileAuthState } = baileys;
+const qrcode = require('qrcode-terminal');
 const { handleGPT } = require('./handlers/gptHandler');
 require('dotenv').config();
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth');
     const sock = baileys.default({
-        printQRInTerminal: true,
         auth: state,
+    });
+
+    sock.ev.on('connection.update', ({ connection, qr }) => {
+        if (qr) {
+            qrcode.generate(qr, { small: true });
+        }
+        if (connection === 'open') {
+            console.log('Connection opened');
+        } else if (connection === 'close') {
+            console.log('Connection closed');
+        }
     });
 
     sock.ev.on('creds.update', saveCreds);
