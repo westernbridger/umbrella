@@ -1,42 +1,13 @@
-const baileys = require('baileys');
-const { useMultiFileAuthState } = baileys;
-const qrcode = require('qrcode-terminal');
-const { handleGPT } = require('./handlers/gptHandler');
+const { create } = require('@open-wa/wa-automate');
 require('dotenv').config();
 
-async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth');
-    const sock = baileys.default({
-        auth: state,
-    });
-
-    sock.ev.on('connection.update', ({ connection, qr }) => {
-        if (qr) {
-            qrcode.generate(qr, { small: true });
-        }
-        if (connection === 'open') {
-            console.log('Connection opened');
-        } else if (connection === 'close') {
-            console.log('Connection closed');
-        }
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-
-        const body = msg.message.conversation ||
-            msg.message.extendedTextMessage?.text || '';
-
-        if (body.startsWith('!gpt')) {
-            const prompt = body.replace('!gpt', '').trim();
-            const response = await handleGPT(prompt);
-            await sock.sendMessage(msg.key.remoteJid, { text: response }, { quoted: msg });
+function start(client) {
+    client.onMessage(async message => {
+        if (message.body && message.body.startsWith('@zaphar')) {
+            await client.sendText(message.from, '👋 Hey! Zaphar is online and ready.');
         }
     });
 }
 
-startBot();
+create({ headless: false }).then(start);
 
