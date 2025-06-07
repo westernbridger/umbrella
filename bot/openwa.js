@@ -5,7 +5,6 @@ const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { handleOpenWaMessage } = require('./handlers/openwaMessageHandler');
-const { processGroup } = require('./handlers/groupInit');
 const { startScheduler } = require('../utils/scheduler');
 
 async function start() {
@@ -35,15 +34,6 @@ async function start() {
 
   startScheduler((chatId, text) => client.sendText(chatId, text));
 
-  client.onAddedToGroup(async (chat) => {
-    await processGroup(client, chat.id, botId);
-  });
-
-  client.onGlobalParticipantsChanged(async (ev) => {
-    if (ev.action === 'add' || ev.action === 'invite') {
-      await processGroup(client, ev.chat, botId);
-    }
-  });
 
   client.onMessage(async (message) => {
     try {

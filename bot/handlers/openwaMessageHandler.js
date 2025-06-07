@@ -29,9 +29,9 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
   const userMem = await getOrCreateMemory(userId);
   const botName = (userMem.name || defaultName).toLowerCase();
 
-  const rawMentionByJid = (message.mentionedJidList || []).includes(botId);
-  const mentionByName = new RegExp(`@${botName}\\b`, 'i').test(text);
-  const mentionByJid = rawMentionByJid || mentionByName;
+  const mentionByJid = (message.mentionedJidList || []).includes(botId);
+  const botUserId = '137078763479182';
+  const mentionByIdText = text.includes('@' + botUserId);
   const textIncludesBotName = /@zaphar/i.test(text);
   const isReplyToBot =
     (message.quotedMsg && message.quotedMsg.fromMe) ||
@@ -48,7 +48,8 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
     });
   }
 
-  const shouldReply = !isGroup || mentionByJid || isReplyToBot || textIncludesBotName;
+  const shouldReply =
+    !isGroup || mentionByJid || isReplyToBot || mentionByIdText || textIncludesBotName;
   if (!shouldReply) return;
 
   console.log('[MSG]', { from, isGroup, mentionByJid, isReplyToBot, textIncludesBotName });
