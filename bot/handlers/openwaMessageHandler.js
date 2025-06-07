@@ -30,7 +30,10 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
   const botName = (userMem.name || defaultName).toLowerCase();
 
   const mentionByJid = (message.mentionedJidList || []).includes(botId);
-  const isReplyToBot = message.quotedMsg && message.quotedMsg.fromMe;
+  const isReplyToBot =
+    (message.quotedMsg && message.quotedMsg.fromMe) ||
+    (message.quotedMsgObj && message.quotedMsgObj.fromMe) ||
+    message.quotedParticipant === botId;
 
   const shouldReply = !isGroup || mentionByJid || isReplyToBot;
   if (!shouldReply) return;
@@ -67,7 +70,7 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
         return;
       }
 
-      await addJob(from, msg, date);
+      await addJob(from, msg, date, userId);
       await client.reply(
         from,
         `Got it ${message.sender.pushname}, I'll remind you at ${date.toLocaleString()} to: ${msg}`,

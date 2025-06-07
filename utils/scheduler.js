@@ -1,4 +1,6 @@
 const ScheduledMessage = require('../models/ScheduledMessage');
+const { askGPT } = require('./gpt');
+const { getOrCreateMemory } = require('./memory');
 
 /**
  * Start the scheduler which checks for pending messages every 10 seconds.
@@ -11,7 +13,12 @@ function startScheduler(sendFn) {
     if (jobs.length) console.log('[SCHEDULER]', 'Sending', jobs.length, 'queued messages');
     for (const job of jobs) {
       try {
-        await sendFn(job.chatId, job.message);
+        let text = job.message;
+        if (job.prompt) {
+          const mem = job.userId ? await getOrCreateMemory(job.userId) : {};
+          text = await askGPT(job.prompt, mem);
+        }
+        await sendFn(job.chatId, text);
         job.sent = true;
         await job.save();
       } catch (err) {
@@ -21,8 +28,8 @@ function startScheduler(sendFn) {
   }, 10 * 1000);
 }
 
-async function addJob(chatId, message, time) {
-  return ScheduledMessage.create({ chatId, message, scheduledTime: time, sent: false });
+async function addJob(chatId, prompt, time, userId) {
+  return ScheduledMessage.create({ chatId, prompt, userId, message: prompt, scheduledTime: time, sent: false });
 }
 
 module.exports = { startScheduler, addJob };
