@@ -29,11 +29,23 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
   const userMem = await getOrCreateMemory(userId);
   const botName = (userMem.name || defaultName).toLowerCase();
 
-  const mentionByJid = (message.mentionedJidList || []).includes(botId);
+  const rawMentionByJid = (message.mentionedJidList || []).includes(botId);
+  const mentionByName = new RegExp(`@${botName}\\b`, 'i').test(text);
+  const mentionByJid = rawMentionByJid || mentionByName;
   const isReplyToBot =
     (message.quotedMsg && message.quotedMsg.fromMe) ||
     (message.quotedMsgObj && message.quotedMsgObj.fromMe) ||
     message.quotedParticipant === botId;
+
+  if (isGroup) {
+    console.log('[DBG]', {
+      groupId: from,
+      text,
+      mentionedJidList: message.mentionedJidList,
+      botId,
+      mentionByJid,
+    });
+  }
 
   const shouldReply = !isGroup || mentionByJid || isReplyToBot;
   if (!shouldReply) return;
