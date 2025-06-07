@@ -1,6 +1,14 @@
 const { askGPT } = require('../../utils/gpt');
+const fs = require('fs');
 const memoryHandler = require('./memoryHandler');
-const { getOrCreateMemory, setBotName, addFact, updateSummary } = require('../../utils/memory');
+const { createVoiceFiles } = require('../../utils/tts');
+const imageHandler = require('../../utils/image');
+const {
+  getOrCreateMemory,
+  setBotName,
+  addFact,
+  updateSummary,
+} = require('../../utils/memory');
 const { addJob } = require('../../utils/scheduler');
 const chrono = require('chrono-node');
 
@@ -22,13 +30,12 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
   const botName = (userMem.name || defaultName).toLowerCase();
 
   const mentionByJid = (message.mentionedJidList || []).includes(botId);
-  const mentionByName = new RegExp(`@${botName}\\b`, 'i').test(text);
   const isReplyToBot = message.quotedMsg && message.quotedMsg.fromMe;
 
-  const shouldReply = !isGroup || mentionByJid || isReplyToBot || mentionByName;
+  const shouldReply = !isGroup || mentionByJid || isReplyToBot;
   if (!shouldReply) return;
 
-  console.log('[MSG]', { from, isGroup, mentionByJid, mentionByName, isReplyToBot });
+  console.log('[MSG]', { from, isGroup, mentionByJid, isReplyToBot });
 
   let prompt = text.replace(/@[0-9]+/g, '').replace(new RegExp(`@${botName}\\b`, 'ig'), '').trim();
 
@@ -48,14 +55,54 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
     if (parsed.length) {
       const { start, text: timeText } = parsed[0];
       const date = start.date();
+      const hasTime = start.knownValues.hour !== undefined;
+
       let msg = prompt
         .replace(timeText, '')
         .replace(/^(send|remind)( me)?( to)?/i, '')
         .trim();
+
+      if (!hasTime) {
+        await client.reply(from, `Sure ${message.sender.pushname}! Should I remind you at 9am?`, message.id);
+        return;
+      }
+
       await addJob(from, msg, date);
-      await client.reply(from, `Got it! I'll remind you at ${date.toLocaleString()} to: ${msg}`, message.id);
+      await client.reply(
+        from,
+        `Got it ${message.sender.pushname}, I'll remind you at ${date.toLocaleString()} to: ${msg}`,
+        message.id
+      );
       return;
     }
+  }
+
+  if (/^voice:\s*/i.test(prompt)) {
+    const topic = prompt.replace(/^voice:\s*/i, '').trim();
+    const reply = await askGPT(topic, userMem, message.sender.pushname);
+    const files = await createVoiceFiles(reply);
+    for (const file of files) {
+      await client.sendPtt(from, file, message.id);
+      fs.unlinkSync(file);
+    }
+    await memoryHandler.saveInteraction(from, message, reply);
+    await updateSummary(userId);
+    return;
+  }
+
+  const imgMatch = prompt.match(/^(generate image:|draw:)\s*(.+)/i);
+  if (imgMatch) {
+    try {
+      const imgPath = await imageHandler.generateImage(imgMatch[2]);
+      await client.sendImage(from, imgPath, 'image.jpg', '', message.id);
+      fs.unlinkSync(imgPath);
+      await memoryHandler.saveInteraction(from, message, '[image]');
+      await updateSummary(userId);
+    } catch (err) {
+      console.error('[IMG]', err);
+      await client.reply(from, 'Image generation failed.', message.id);
+    }
+    return;
   }
 
   try {
