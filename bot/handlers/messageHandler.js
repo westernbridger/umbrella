@@ -5,6 +5,7 @@ const memoryHandler = require('./memoryHandler');
 const { detectLanguage } = require('../../utils/languageDetector');
 const { getOrCreateMemory, setBotName, addFact, updateSummary } = require('../../utils/memory');
 const { addJob } = require('../../utils/scheduler');
+const chrono = require('chrono-node');
 
 async function handleMessage(sock, m) {
   if (!m.message || m.key.fromMe) return;
@@ -13,9 +14,8 @@ async function handleMessage(sock, m) {
   const isGroup = from.endsWith('@g.us');
   const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const isMentioned = mentions.includes(sock.user.id);
-  const isReply =
-    m.message?.extendedTextMessage?.contextInfo?.participant === sock.user.id;
-  if (isGroup && !(isMentioned || isReply)) return;
+  const quoted = m.message?.extendedTextMessage?.contextInfo;
+  const isReply = quoted?.participant === sock.user.id;
 
   const text =
     m.message.conversation ||
@@ -25,10 +25,26 @@ async function handleMessage(sock, m) {
     '';
   if (!text) return;
 
-  let prompt = text.replace(/@[0-9]+/g, '').trim();
-  const lang = detectLanguage(prompt);
   const userId = isGroup ? m.key.participant : from;
   const userMem = await getOrCreateMemory(userId);
+  const botName = userMem.name ? userMem.name.toLowerCase() : null;
+  const mentionByName = botName ? new RegExp(`@${botName}\\b`, 'i').test(text) : false;
+  let quotedText = '';
+  if (quoted?.quotedMessage) {
+    quotedText =
+      quoted.quotedMessage.conversation ||
+      quoted.quotedMessage.extendedTextMessage?.text ||
+      '';
+  }
+  const quotedMentions =
+    quoted?.quotedMessage?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+  const mentionInQuote = quotedMentions.includes(sock.user.id) ||
+    (botName ? new RegExp(`@${botName}\\b`, 'i').test(quotedText) : false);
+
+  if (isGroup && !(isMentioned || mentionByName || isReply || mentionInQuote)) return;
+
+  let prompt = text.replace(/@[0-9]+/g, '').trim();
+  const lang = detectLanguage(prompt);
 
   try {
     const nameSet = prompt.match(/your name is now\s+(.+)/i);
@@ -42,27 +58,27 @@ async function handleMessage(sock, m) {
       await addFact(userId, 'podcast', true);
     }
 
-    const schedMatch = prompt.match(/send(?: me)? (.+?) (?:tomorrow )?at (\d{1,2})(?::(\d{2}))?\s?(am|pm)/i);
-    if (schedMatch) {
-      let hour = parseInt(schedMatch[2]);
-      const minute = parseInt(schedMatch[3] || '0');
-      const ampm = schedMatch[4].toLowerCase();
-      if (ampm === 'pm' && hour < 12) hour += 12;
-      if (ampm === 'am' && hour === 12) hour = 0;
-      const date = new Date();
-      if (/tomorrow/i.test(prompt)) date.setDate(date.getDate() + 1);
-      date.setHours(hour, minute, 0, 0);
-      await addJob(from, schedMatch[1], date);
-      await sock.sendMessage(from, { text: `Got it ${m.pushName}! I'll send it at ${date.toLocaleString()}.` }, { quoted: m });
-      return;
-    } else if (/send.+tomorrow/i.test(prompt)) {
-      await sock.sendMessage(from, { text: `Sure ${m.pushName}! Is 9am good for you?` }, { quoted: m });
-      return;
+    const schedIntent = /(send|remind)/i.test(prompt);
+    if (schedIntent) {
+      const parsed = chrono.parse(prompt, new Date(), { forwardDate: true });
+      if (parsed.length) {
+        const { start, text: timeText, index } = parsed[0];
+        const date = start.date();
+        const hasTime = start.knownValues.hour !== undefined;
+        const msg = prompt.replace(timeText, '').trim();
+        if (!hasTime) {
+          await sock.sendMessage(from, { text: `Sure ${m.pushName}! Is 9am okay?` }, { quoted: m });
+          return;
+        }
+        await addJob(from, msg.replace(/^(send|remind)\s*(me)?/i, '').trim(), date);
+        await sock.sendMessage(from, { text: `Got it ${m.pushName}! I'll send it at ${date.toLocaleString()}.` }, { quoted: m });
+        return;
+      }
     }
 
     if (/^voice:\s*/i.test(prompt)) {
       const topic = prompt.replace(/^voice:\s*/i, '').trim();
-      const reply = await askGPT(topic, userMem);
+      const reply = await askGPT(topic, userMem, m.pushName);
       await ttsHandler.sendTTS(sock, from, reply, m);
       await memoryHandler.saveInteraction(from, m, reply);
       await updateSummary(userId);
@@ -77,7 +93,7 @@ async function handleMessage(sock, m) {
       return;
     }
 
-    const reply = await askGPT(prompt, userMem);
+    const reply = await askGPT(prompt, userMem, m.pushName);
     await sock.sendMessage(from, { text: reply }, { quoted: m });
     await memoryHandler.saveInteraction(from, m, reply);
     await updateSummary(userId);

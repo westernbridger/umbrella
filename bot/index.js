@@ -25,7 +25,7 @@ const { handleReaction } = require('./handlers/reactionHandler');
 const { startScheduler } = require('../utils/scheduler');
 
 async function startSock() {
-  const authPath = path.join(__dirname, 'auth');
+  const authPath = path.resolve(__dirname, '../auth');
   const { state, saveCreds } = await useMultiFileAuthState(authPath);
   const { version } = await fetchLatestBaileysVersion();
   const mongoUri = process.env.MONGODB_URI;
