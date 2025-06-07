@@ -1,23 +1,28 @@
 const ScheduledMessage = require('../models/ScheduledMessage');
 
-function startScheduler(sock) {
+/**
+ * Start the scheduler which checks for pending messages every 10 seconds.
+ * @param {(chatId: string, text: string) => Promise<any>} sendFn Function used to send a message.
+ */
+function startScheduler(sendFn) {
   setInterval(async () => {
     const now = new Date();
     const jobs = await ScheduledMessage.find({ sent: false, scheduledTime: { $lte: now } });
+    if (jobs.length) console.log('[SCHEDULER]', 'Sending', jobs.length, 'queued messages');
     for (const job of jobs) {
       try {
-        await sock.sendMessage(job.userId, { text: job.message });
+        await sendFn(job.chatId, job.message);
         job.sent = true;
         await job.save();
       } catch (err) {
         console.error('[SCHEDULER]', err.message);
       }
     }
-  }, 60 * 1000);
+  }, 10 * 1000);
 }
 
-async function addJob(userId, message, time) {
-  return ScheduledMessage.create({ userId, message, scheduledTime: time, sent: false });
+async function addJob(chatId, message, time) {
+  return ScheduledMessage.create({ chatId, message, scheduledTime: time, sent: false });
 }
 
 module.exports = { startScheduler, addJob };
