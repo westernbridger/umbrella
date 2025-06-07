@@ -7,8 +7,18 @@ const {
 const qrcode = require('qrcode-terminal');
 const P = require('pino');
 const path = require('path');
+const fs = require('fs');
 const mongoose = require('mongoose');
-require('dotenv').config();
+
+const envPath = path.resolve(__dirname, '../.env');
+if (!fs.existsSync(envPath)) {
+  fs.writeFileSync(envPath, 'MONGODB_URI=\n');
+  console.warn(
+    'Warning: .env file not found. Created a new one — please fill in your MongoDB URI.'
+  );
+}
+
+require('dotenv').config({ path: envPath });
 
 const { handleMessage } = require('./handlers/messageHandler');
 
@@ -16,7 +26,15 @@ async function startSock() {
   const authPath = path.join(__dirname, 'auth');
   const { state, saveCreds } = await useMultiFileAuthState(authPath);
   const { version } = await fetchLatestBaileysVersion();
-  await mongoose.connect(process.env.MONGO_URI || '', {});
+  const mongoUri = process.env.MONGODB_URI;
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI is not defined in .env');
+  }
+  if (!mongoUri.startsWith('mongodb+srv://')) {
+    throw new Error('MONGODB_URI must start with mongodb+srv://');
+  }
+  await mongoose.connect(mongoUri, {});
+  console.log('MongoDB Connected');
   const sock = makeWASocket({ logger: P({ level: 'silent' }), version, auth: state });
 
   sock.ev.on('creds.update', saveCreds);
