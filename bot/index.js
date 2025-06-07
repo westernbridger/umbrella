@@ -64,7 +64,17 @@ async function startSock() {
 
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0];
-    await handleMessage(sock, m);
+    try {
+      await handleMessage(sock, m);
+    } catch (err) {
+      if (/decrypt/i.test(err.message)) {
+        console.warn('[Session]', 'Decryption failed, restarting session...');
+        try { await sock.logout(); } catch (_) {}
+        startSock();
+      } else {
+        console.error('Message error:', err);
+      }
+    }
   });
 
   sock.ev.on('messages.reaction', async (reactions) => {
