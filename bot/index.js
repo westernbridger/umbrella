@@ -21,6 +21,8 @@ if (!fs.existsSync(envPath)) {
 require('dotenv').config({ path: envPath });
 
 const { handleMessage } = require('./handlers/messageHandler');
+const { handleReaction } = require('./handlers/reactionHandler');
+const { startScheduler } = require('../utils/scheduler');
 
 async function startSock() {
   const authPath = path.join(__dirname, 'auth');
@@ -36,6 +38,8 @@ async function startSock() {
   await mongoose.connect(mongoUri, {});
   console.log('MongoDB Connected');
   const sock = makeWASocket({ logger: P({ level: 'silent' }), version, auth: state });
+
+  startScheduler(sock);
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -61,6 +65,12 @@ async function startSock() {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0];
     await handleMessage(sock, m);
+  });
+
+  sock.ev.on('messages.reaction', async (reactions) => {
+    for (const r of reactions) {
+      await handleReaction(sock, r);
+    }
   });
 }
 
