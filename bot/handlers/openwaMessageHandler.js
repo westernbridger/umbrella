@@ -32,6 +32,7 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
   const rawMentionByJid = (message.mentionedJidList || []).includes(botId);
   const mentionByName = new RegExp(`@${botName}\\b`, 'i').test(text);
   const mentionByJid = rawMentionByJid || mentionByName;
+  const textIncludesBotName = /@zaphar/i.test(text);
   const isReplyToBot =
     (message.quotedMsg && message.quotedMsg.fromMe) ||
     (message.quotedMsgObj && message.quotedMsgObj.fromMe) ||
@@ -47,12 +48,16 @@ async function handleOpenWaMessage(client, message, botId, defaultName = 'zaphar
     });
   }
 
-  const shouldReply = !isGroup || mentionByJid || isReplyToBot;
+  const shouldReply = !isGroup || mentionByJid || isReplyToBot || textIncludesBotName;
   if (!shouldReply) return;
 
-  console.log('[MSG]', { from, isGroup, mentionByJid, isReplyToBot });
+  console.log('[MSG]', { from, isGroup, mentionByJid, isReplyToBot, textIncludesBotName });
 
-  let prompt = text.replace(/@[0-9]+/g, '').replace(new RegExp(`@${botName}\\b`, 'ig'), '').trim();
+  let prompt = text
+    .replace(/@[0-9]+/g, '')
+    .replace(new RegExp(`@${botName}\\b`, 'ig'), '')
+    .replace(/@zaphar/gi, '')
+    .trim();
 
   const nameSet = prompt.match(/your name is now\s+(.+)/i);
   if (nameSet) {

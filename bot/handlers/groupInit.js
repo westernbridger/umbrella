@@ -20,16 +20,8 @@ async function ensureMemberSession(client, memberId, groupId, botId) {
 async function processGroup(client, groupId, botId) {
   try {
     const members = await client.getGroupMembersId(groupId);
-    let missing = [];
     for (const id of members) {
-      const ok = await ensureMemberSession(client, id, groupId, botId);
-      if (!ok) missing.push(id);
-    }
-    if (missing.length) {
-      await client.sendText(
-        groupId,
-        'Not all group members have completed bot setup. Please reply to my DM to enable group features.'
-      );
+      await ensureMemberSession(client, id, groupId, botId);
     }
   } catch (err) {
     console.error('[GROUP INIT]', err.message);
