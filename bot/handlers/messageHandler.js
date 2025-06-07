@@ -12,10 +12,10 @@ async function handleMessage(sock, m) {
 
   const from = m.key.remoteJid;
   const isGroup = from.endsWith('@g.us');
-  const mentions = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-  const isMentioned = mentions.includes(sock.user.id);
-  const quoted = m.message?.extendedTextMessage?.contextInfo;
-  const isReply = quoted?.participant === sock.user.id;
+  const context = m.message?.extendedTextMessage?.contextInfo || {};
+  const mentions = context.mentionedJid || [];
+  const isMentionedByJid = mentions.includes(sock.user.id);
+  const isReplyToBot = context.participant === sock.user.id;
 
   const text =
     m.message.conversation ||
@@ -27,21 +27,36 @@ async function handleMessage(sock, m) {
 
   const userId = isGroup ? m.key.participant : from;
   const userMem = await getOrCreateMemory(userId);
-  const botName = userMem.name ? userMem.name.toLowerCase() : null;
+  const botName = userMem.name ? userMem.name.toLowerCase() : '';
   const mentionByName = botName ? new RegExp(`@${botName}\\b`, 'i').test(text) : false;
+
   let quotedText = '';
-  if (quoted?.quotedMessage) {
+  if (context.quotedMessage) {
     quotedText =
-      quoted.quotedMessage.conversation ||
-      quoted.quotedMessage.extendedTextMessage?.text ||
+      context.quotedMessage.conversation ||
+      context.quotedMessage.extendedTextMessage?.text ||
       '';
   }
   const quotedMentions =
-    quoted?.quotedMessage?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-  const mentionInQuote = quotedMentions.includes(sock.user.id) ||
+    context.quotedMessage?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+  const isMentionedInQuote = quotedMentions.includes(sock.user.id) ||
     (botName ? new RegExp(`@${botName}\\b`, 'i').test(quotedText) : false);
 
-  if (isGroup && !(isMentioned || mentionByName || isReply || mentionInQuote)) return;
+  const shouldReply =
+    !isGroup || isMentionedByJid || isReplyToBot || mentionByName || isMentionedInQuote;
+  if (!shouldReply) return;
+
+  console.log('[Mention Debug]', {
+    botJid: sock.user.id,
+    mentionedJids: mentions,
+    isMentionedByJid,
+    isReplyToBot,
+    mentionByName,
+    quotedText,
+    isMentionedInQuote,
+    text,
+    shouldReply
+  });
 
   let prompt = text.replace(/@[0-9]+/g, '').trim();
   const lang = detectLanguage(prompt);
@@ -62,16 +77,22 @@ async function handleMessage(sock, m) {
     if (schedIntent) {
       const parsed = chrono.parse(prompt, new Date(), { forwardDate: true });
       if (parsed.length) {
-        const { start, text: timeText, index } = parsed[0];
+        const { start, text: timeText } = parsed[0];
         const date = start.date();
         const hasTime = start.knownValues.hour !== undefined;
-        const msg = prompt.replace(timeText, '').trim();
+
+        let msg = prompt
+          .replace(timeText, '')
+          .replace(/^(send|remind)( me)?( to)?/i, '')
+          .trim();
+
         if (!hasTime) {
-          await sock.sendMessage(from, { text: `Sure ${m.pushName}! Is 9am okay?` }, { quoted: m });
+          await sock.sendMessage(from, { text: `Sure ${m.pushName}! Should I send that at 9am?` }, { quoted: m });
           return;
         }
-        await addJob(from, msg.replace(/^(send|remind)\s*(me)?/i, '').trim(), date);
-        await sock.sendMessage(from, { text: `Got it ${m.pushName}! I'll send it at ${date.toLocaleString()}.` }, { quoted: m });
+
+        await addJob(from, msg, date);
+        await sock.sendMessage(from, { text: `Got it ${m.pushName}, I’ll remind you at ${date.toLocaleString()} to: ${msg}` }, { quoted: m });
         return;
       }
     }
