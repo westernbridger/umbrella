@@ -10,6 +10,10 @@ const memorySchema = new mongoose.Schema({
 
 const Memory = mongoose.model('Memory', memorySchema);
 
+async function getRecentMessages(userId, limit = 200) {
+  return Memory.find({ userId }).sort({ timestamp: -1 }).limit(limit).lean();
+}
+
 async function saveInteraction(chatId, m, response) {
   const text =
     m.message.conversation ||
@@ -20,4 +24,4 @@ async function saveInteraction(chatId, m, response) {
   await Memory.create({ chatId, userId: m.key.participant || m.key.remoteJid, text, response });
 }
 
-module.exports = { saveInteraction };
+module.exports = { saveInteraction, getRecentMessages, Memory };
