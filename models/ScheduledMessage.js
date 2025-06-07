@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const scheduledMessageSchema = new mongoose.Schema({
-  userId: String,
+  chatId: String,
   message: String,
   scheduledTime: Date,
   sent: { type: Boolean, default: false },
