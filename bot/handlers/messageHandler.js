@@ -91,7 +91,7 @@ async function handleMessage(sock, m) {
           return;
         }
 
-        await addJob(from, msg, date);
+        await addJob(from, msg, date, userId);
         await sock.sendMessage(from, { text: `Got it ${m.pushName}, I’ll remind you at ${date.toLocaleString()} to: ${msg}` }, { quoted: m });
         return;
       }
