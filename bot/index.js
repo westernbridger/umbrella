@@ -103,7 +103,7 @@ async function generateImage(prompt) {
 }
 
 async function startSock() {
-  const authFolder = path.join(__dirname, 'baileys_auth', process.env.WHATSAPP_SESSION_ID || 'default');
+  const authFolder = path.join(__dirname, 'baileys_auth');
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
   const { version } = await fetchLatestBaileysVersion();
   const sock = makeWASocket({ version, auth: state, logger: P({ level: 'silent' }) });
@@ -148,7 +148,14 @@ async function startSock() {
     try {
       if (!text.toLowerCase().startsWith('@zaphar')) return;
 
-      const prompt = text.replace(/^@zaphar/i, '').trim();
+      let prompt = text.replace(/^@zaphar/i, '').trim();
+      let wantVoice = false;
+
+      if (text.toLowerCase().startsWith('@zaphar voice:')) {
+        wantVoice = true;
+        prompt = text.replace(/^@zaphar voice:/i, '').trim();
+      }
+
       if (!prompt) return;
 
       const imgMatch = prompt.match(/generate image:\s*(.*)/i);
@@ -161,7 +168,9 @@ async function startSock() {
 
       const reply = await askGPT(prompt);
       await sendText(sock, from, reply, m);
-      await sendVoice(sock, from, reply, m);
+      if (wantVoice) {
+        await sendVoice(sock, from, reply, m);
+      }
     } catch (err) {
       console.error('Processing error:', err);
       await sock.sendMessage(from, { text: '⚠️ Sorry, something went wrong. Try again later!' }, { quoted: m });
