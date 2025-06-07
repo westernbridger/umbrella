@@ -1,5 +1,11 @@
 node_modules/
 baileys_auth/
+auth/
 .env
-
 package-lock.json
+
+# managed by open-wa
+**.data.json
+**.node-persist**
+**_IGNORE_**
+# end managed by open-wa
