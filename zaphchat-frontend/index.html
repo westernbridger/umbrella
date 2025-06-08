@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZaphChat Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    html, body, #root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      overscroll-behavior: none; /* Prevents pull-to-refresh type behaviors if not desired */
+      background-color: #0f172a; /* Fallback, matches slate-900 */
+      overflow: hidden; /* Prevent body scrollbars, scrolling should be handled by internal containers */
+    }
+    .animated-gradient-background {
+      background: linear-gradient(45deg, #0a0327, #1a103c, #2c165a, #3c2070, #1e1447); /* Deep navy, indigo, midnight blue, muted purple spectrum */
+      background-size: 400% 400%;
+      animation: gradientShift 20s ease infinite;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -2; /* Ensure it's behind everything, including potential z-10 elements */
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* Custom scrollbar styling */
+    /* For WebKit browsers (Chrome, Safari, Edge) */
+    ::-webkit-scrollbar {
+      width: 8px; /* Width of the vertical scrollbar */
+      height: 8px; /* Height of the horizontal scrollbar */
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent; /* Track is invisible */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.45); /* slate-500 with ~45% opacity: subtle */
+      border-radius: 10px; /* Rounded thumb */
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.75); /* slate-500 with 75% opacity: more visible on hover */
+    }
+
+    /* For Firefox */
+    /* Applied globally for simplicity, target specific elements if more control is needed */
+    * {
+      scrollbar-width: thin; /* "auto" or "thin" */
+      scrollbar-color: rgba(100, 116, 139, 0.45) transparent; /* thumb color and track color (transparent) */
+    }
+
+    /* Custom form-checkbox and form-radio styling for better theme consistency */
+    .form-checkbox, .form-radio {
+      appearance: none;
+      padding: 0;
+      display: inline-block;
+      vertical-align: middle;
+      background-origin: border-box;
+      user-select: none;
+      flex-shrink: 0;
+      height: 1rem;
+      width: 1rem;
+      color: #06b6d4; /* cyan-500 */
+      background-color: #334155; /* slate-700 */
+      border-color: #475569; /* slate-600 */
+      border-width: 1px;
+      border-radius: 0.25rem; /* rounded */
+    }
+    .form-checkbox:checked {
+      background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+      border-color: transparent;
+      background-color: currentColor;
+      background-size: 100% 100%;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .form-checkbox:focus, .form-radio:focus {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        --tw-ring-inset: var(--tw-empty,/*!*/ /*!*/);
+        --tw-ring-offset-width: 2px;
+        --tw-ring-offset-color: #0f172a; /* slate-900 */
+        --tw-ring-color: #06b6d4; /* cyan-500 */
+        --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+        --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+        box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    }
+
+    /* React Grid Layout Styles */
+    .react-grid-layout {
+      position: relative;
+      transition: height 200ms ease;
+    }
+    .react-grid-item {
+      transition: all 200ms ease;
+      transition-property: left, top;
+    }
+    .react-grid-item.cssTransforms {
+      transition-property: transform;
+    }
+    .react-grid-item.resizing {
+      z-index: 1;
+      will-change: width, height;
+    }
+    .react-grid-item.react-draggable-dragging {
+      transition:none;
+      z-index: 3;
+      will-change: transform;
+      cursor: grabbing !important;
+    }
+    .react-grid-item.react-grid-placeholder {
+      background: rgba(0, 200, 255, 0.1); /* Cyan-ish placeholder */
+      border-radius: 1.5rem; /* Matches GlassCard */
+      opacity: 0.8;
+      transition-duration: 100ms;
+      z-index: 2;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      -o-user-select: none;
+      user-select: none;
+    }
+    .react-grid-item > .react-resizable-handle {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      bottom: 0;
+      right: 0;
+      cursor: se-resize;
+      display: none; /* This hides all resize handles */
+    }
+    /* The ::after styling for the visual gizmo is still here but won't be visible if the parent handle is hidden. */
+    .react-grid-item > .react-resizable-handle::after {
+      content: "";
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid rgba(203, 213, 225, 0.4); /* slate-300 with opacity */
+      border-bottom: 2px solid rgba(203, 213, 225, 0.4);
+      /* display: none; by default, this was part of the conditional logic */
+    }
+    /* This rule is no longer strictly necessary if all handles are hidden via the parent.
+       However, it doesn't hurt to keep it for consistency if some items were to be made resizable again.
+       If an item IS resizable, it would get .react-resizable, and then this would show its gizmo.
+       But since the parent .react-resizable-handle is display:none, this ::after will also be hidden.
+    */
+    .react-grid-item.react-resizable > .react-resizable-handle::after {
+      /* display: block; */ /* This would normally show it for resizable items */
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@heroicons/react/24/outline/": "https://esm.sh/@heroicons/react@2.0.18/24/outline/",
+    "lucide-react": "https://esm.sh/lucide-react@0.292.0",
+    "react-grid-layout": "https://esm.sh/react-grid-layout@1.4.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="overflow-hidden"> <!-- Body overflow is hidden; scrolling handled by internal elements -->
+  <div id="root" class="h-full"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

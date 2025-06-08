@@ -1,0 +1,5 @@
+{
+  "name": "ZaphChat Dashboard",
+  "description": "A stunning, modern dashboard UI for ZaphChat, featuring a deep-glassmorphism style with animated backgrounds and premium aesthetics.",
+  "requestFramePermissions": ["geolocation"]
+}
