@@ -5,7 +5,11 @@ interface AuthContextProps {
   token: string | null;
   user: any | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message: string; user?: any }>;
   logout: () => void;
 }
 
@@ -61,8 +65,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     if (!res.ok) {
       throw new Error(data.message || 'Registration failed');
     }
-    setToken(data.token);
-    setUser(data.user);
+    return data;
   };
 
   const logout = () => {
