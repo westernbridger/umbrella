@@ -5,6 +5,8 @@ import MainContent from './components/MainContent';
 import AnimatedBackground from './components/AnimatedBackground';
 import Header from './components/Header';
 import LoginPage from './components/pages/LoginPage';
+import RegisterPage from './components/pages/RegisterPage';
+import { useToast } from './components/ToastProvider';
 import { useAuth } from './AuthContext';
 import { NavItemConfig } from './types';
 import { LayoutDashboardIcon, BarChart2Icon, CalendarClockIcon, Users2Icon, RobotIcon, FileTextIcon, SettingsIcon as GeneralSettingsIcon } from './components/icons'; // Renamed SettingsIcon to avoid conflict
@@ -24,6 +26,8 @@ export type ServerStatusType = 'operational' | 'rebooting' | 'down';
 
 const App: React.FC = () => {
   const { token, logout } = useAuth();
+  const { addToast } = useToast();
+  const [showRegister, setShowRegister] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.matchMedia(LG_BREAKPOINT).matches);
   const [activePageId, setActivePageId] = useState<string>(navigationConfig[0].id);
   const [pageTitle, setPageTitle] = useState<string>(navigationConfig[0].name);
@@ -79,7 +83,18 @@ const App: React.FC = () => {
   }, [activePageId]);
 
   if (!token) {
-    return <LoginPage />;
+    if (showRegister) {
+      return (
+        <RegisterPage
+          onShowLogin={() => setShowRegister(false)}
+          onRegistered={(name) => {
+            addToast(`Welcome to ZaphChat, ${name}!`);
+            setShowRegister(false);
+          }}
+        />
+      );
+    }
+    return <LoginPage onShowRegister={() => setShowRegister(true)} />;
   }
 
   return (
