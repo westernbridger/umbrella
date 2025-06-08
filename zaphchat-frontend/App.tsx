@@ -24,7 +24,7 @@ const navigationConfig: NavItemConfig[] = [
 const LG_BREAKPOINT = '(min-width: 1024px)';
 
 const App: React.FC = () => {
-  const { token, logout } = useAuth();
+  const { token, logout, loading } = useAuth();
   const { addToast } = useToast();
   const [showRegister, setShowRegister] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.matchMedia(LG_BREAKPOINT).matches);
@@ -67,6 +67,10 @@ const App: React.FC = () => {
       setPageTitle(navigationConfig[0].name);
     }
   }, [activePageId]);
+
+  if (loading) {
+    return null;
+  }
 
   if (!token) {
     if (showRegister) {
