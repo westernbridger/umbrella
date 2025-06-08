@@ -14,12 +14,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 }
 
 export const api = {
-  getStats: () => apiFetch('/stats'),
-  getMessagesToday: () => apiFetch<{count: number}>('/messages/today'),
-  getActiveUsers: () => apiFetch<{count: number}>('/users/active'),
-  getActivity: () => apiFetch<any[]>('/activity'),
+  ping: () => apiFetch('/ping'),
+  getServerStatus: () => apiFetch('/status'),
   getBots: () => apiFetch<any[]>('/bots'),
-  getUsers: () => apiFetch<any[]>('/users'),
-  getLogs: () => apiFetch<any[]>('/logs'),
-  getTasks: () => apiFetch<any[]>('/tasks'),
+  createBot: (data: any) => apiFetch('/bots', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  updateBot: (id: string, data: any) => apiFetch(`/bots/${id}`, { method: 'PUT', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  deleteBot: (id: string) => apiFetch(`/bots/${id}`, { method: 'DELETE' }),
+  getMessageStats: () => apiFetch<{ count: number }>('/stats/messages'),
+  getActiveUsers: () => apiFetch<{ count: number }>('/stats/active-users'),
+  getRecentActivity: () => apiFetch<any[]>('/activity/recent'),
+  getSchedulerTasks: () => apiFetch<any[]>('/scheduler/tasks'),
 };

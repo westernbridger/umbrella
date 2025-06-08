@@ -22,7 +22,6 @@ const navigationConfig: NavItemConfig[] = [
 ];
 
 const LG_BREAKPOINT = '(min-width: 1024px)';
-export type ServerStatusType = 'operational' | 'rebooting' | 'down';
 
 const App: React.FC = () => {
   const { token, logout } = useAuth();
@@ -31,30 +30,19 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.matchMedia(LG_BREAKPOINT).matches);
   const [activePageId, setActivePageId] = useState<string>(navigationConfig[0].id);
   const [pageTitle, setPageTitle] = useState<string>(navigationConfig[0].name);
-  const [serverStatus, setServerStatus] = useState<ServerStatusType>('operational');
-
   useEffect(() => {
     const mediaQuery = window.matchMedia(LG_BREAKPOINT);
-    
+
     const handleMediaQueryChange = (event: MediaQueryListEvent) => {
       setIsSidebarOpen(event.matches);
     };
-  
+
     mediaQuery.addEventListener('change', handleMediaQueryChange);
-  
-    // Mock server status cycling
-    const statuses: ServerStatusType[] = ['operational', 'rebooting', 'down'];
-    let currentStatusIndex = 0;
-    const statusInterval = setInterval(() => {
-      currentStatusIndex = (currentStatusIndex + 1) % statuses.length;
-      setServerStatus(statuses[currentStatusIndex]);
-    }, 15000); // Change status every 15 seconds for demo
 
     return () => {
       mediaQuery.removeEventListener('change', handleMediaQueryChange);
-      clearInterval(statusInterval);
     };
-  }, []); 
+  }, []);
   
 
   const toggleSidebar = () => {
@@ -105,7 +93,6 @@ const App: React.FC = () => {
         pageTitle={pageTitle}
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
-        serverStatus={serverStatus}
         onLogout={logout}
       />
       <div className="flex flex-1 overflow-hidden relative"> {/* Added relative for absolute positioning of Sidebar */}
