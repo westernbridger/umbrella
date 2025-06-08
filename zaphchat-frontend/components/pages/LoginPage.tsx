@@ -3,7 +3,9 @@ import GlassCard from '../GlassCard';
 import PremiumButton from '../PremiumButton';
 import { useAuth } from '../../AuthContext';
 
-const LoginPage: React.FC = () => {
+interface LoginPageProps { onShowRegister?: () => void; }
+
+const LoginPage: React.FC<LoginPageProps> = ({ onShowRegister }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,12 +51,20 @@ const LoginPage: React.FC = () => {
               required
             />
           </div>
-          <div className="pt-2 text-center">
-            <PremiumButton type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </PremiumButton>
-          </div>
-        </form>
+        <div className="pt-2 text-center">
+          <PremiumButton type="submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </PremiumButton>
+        </div>
+        {onShowRegister && (
+          <p className="text-sm text-slate-300 text-center pt-2">
+            Don't have an account?{' '}
+            <button type="button" onClick={onShowRegister} className="text-cyan-400 hover:underline">
+              Register
+            </button>
+          </p>
+        )}
+      </form>
       </GlassCard>
     </div>
   );

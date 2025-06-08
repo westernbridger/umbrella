@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const validator = require('validator');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
@@ -16,15 +17,23 @@ function generateToken(user) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, displayName, avatarUrl } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: 'Name, email and password are required' });
     }
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+    if (!validator.isStrongPassword(password, { minLength: 6 })) {
+      return res.status(400).json({ message: 'Password is too weak' });
+    }
+
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(409).json({ message: 'Email already in use' });
     }
-    const user = await User.create({ email, password, displayName, avatarUrl });
+
+    const user = await User.create({ email, password, displayName: name });
     const token = generateToken(user);
     const userData = user.toObject();
     delete userData.password;

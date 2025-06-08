@@ -5,6 +5,7 @@ interface AuthContextProps {
   token: string | null;
   user: any | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -50,6 +51,20 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     setUser(data.user);
   };
 
+  const register = async (name: string, email: string, password: string) => {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || 'Registration failed');
+    }
+    setToken(data.token);
+    setUser(data.user);
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -59,7 +74,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
