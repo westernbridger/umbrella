@@ -167,6 +167,7 @@ const DashboardPage: React.FC<PageProps> = () => {
   }
 
   return (
+    <>
     <ResponsiveGridLayout
       className="layout"
       layouts={layouts}
@@ -295,6 +296,7 @@ const DashboardPage: React.FC<PageProps> = () => {
     </ResponsiveGridLayout>
     {showBotManager && <BotManager onClose={() => setShowBotManager(false)} />}
     {showBroadcast && <BroadcastModal onClose={() => setShowBroadcast(false)} />}
+    </>
   );
 };
 
