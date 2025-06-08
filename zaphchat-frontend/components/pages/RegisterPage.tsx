@@ -21,10 +21,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onShowLogin, onRegistered }
       setError('Passwords do not match');
       return;
     }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
     setLoading(true);
     try {
-      await register(name, email, password);
-      onRegistered && onRegistered(name);
+      const data = await register(name, email, password);
+      if (data.success) {
+        onRegistered && onRegistered(name);
+      } else {
+        setError(data.message || 'Registration failed');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

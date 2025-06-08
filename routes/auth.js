@@ -19,27 +19,40 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Name, email and password are required' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Name, email and password are required' });
     }
     if (!validator.isEmail(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Invalid email format' });
     }
-    if (!validator.isStrongPassword(password, { minLength: 6 })) {
-      return res.status(400).json({ message: 'Password is too weak' });
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Password must be at least 8 characters' });
     }
 
     const existing = await User.findOne({ email });
     if (existing) {
-      return res.status(409).json({ message: 'Email already in use' });
+      return res
+        .status(409)
+        .json({ success: false, message: 'That email is already in use' });
     }
 
     const user = await User.create({ email, password, displayName: name });
-    const token = generateToken(user);
-    const userData = user.toObject();
-    delete userData.password;
-    res.status(201).json({ token, user: userData });
+    const userData = {
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    };
+    res
+      .status(201)
+      .json({ success: true, message: 'User registered successfully', user: userData });
   } catch (err) {
-    res.status(500).json({ message: 'Registration failed' });
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Registration failed' });
   }
 });
 
