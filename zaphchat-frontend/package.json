@@ -9,14 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
     "@heroicons/react": "^2.0.18",
     "lucide-react": "0.292.0",
-    "react-grid-layout": "1.4.4"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-grid-layout": "1.4.4",
+    "react-router-dom": "^7.6.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react-router-dom": "^5.3.3",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
