@@ -54,10 +54,8 @@ const App: React.FC = () => {
     if (selectedNavItem) {
       setActivePageId(selectedNavItem.id);
       setPageTitle(selectedNavItem.name);
-      if (!window.matchMedia(LG_BREAKPOINT).matches) {
-        setIsSidebarOpen(false);
-      }
     }
+    setIsSidebarOpen(false);
   };
   
    useEffect(() => {
