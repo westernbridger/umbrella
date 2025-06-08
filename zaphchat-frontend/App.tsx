@@ -4,6 +4,8 @@ import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import AnimatedBackground from './components/AnimatedBackground';
 import Header from './components/Header';
+import LoginPage from './components/pages/LoginPage';
+import { useAuth } from './AuthContext';
 import { NavItemConfig } from './types';
 import { LayoutDashboardIcon, BarChart2Icon, CalendarClockIcon, Users2Icon, RobotIcon, FileTextIcon, SettingsIcon as GeneralSettingsIcon } from './components/icons'; // Renamed SettingsIcon to avoid conflict
 
@@ -21,6 +23,7 @@ const LG_BREAKPOINT = '(min-width: 1024px)';
 export type ServerStatusType = 'operational' | 'rebooting' | 'down';
 
 const App: React.FC = () => {
+  const { token, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.matchMedia(LG_BREAKPOINT).matches);
   const [activePageId, setActivePageId] = useState<string>(navigationConfig[0].id);
   const [pageTitle, setPageTitle] = useState<string>(navigationConfig[0].name);
@@ -75,16 +78,20 @@ const App: React.FC = () => {
     }
   }, [activePageId]);
 
+  if (!token) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="relative h-screen flex flex-col bg-slate-900 overflow-hidden">
       <AnimatedBackground />
-      <Header 
-        appName="ZaphChat" 
+      <Header
+        appName="ZaphChat"
         pageTitle={pageTitle}
         isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar} 
+        toggleSidebar={toggleSidebar}
         serverStatus={serverStatus}
+        onLogout={logout}
       />
       <div className="flex flex-1 overflow-hidden relative"> {/* Added relative for absolute positioning of Sidebar */}
         <Sidebar 

@@ -9,9 +9,10 @@ interface HeaderProps {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   serverStatus: ServerStatusType; // Added serverStatus prop
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ appName, pageTitle, isSidebarOpen, toggleSidebar, serverStatus }) => {
+const Header: React.FC<HeaderProps> = ({ appName, pageTitle, isSidebarOpen, toggleSidebar, serverStatus, onLogout }) => {
   
   const getServerStatusIndicator = () => {
     let iconColor = 'text-slate-500'; // Default
@@ -91,6 +92,12 @@ const Header: React.FC<HeaderProps> = ({ appName, pageTitle, isSidebarOpen, togg
           </div> 
           */}
         </div>
+        <button
+          onClick={onLogout}
+          className="px-3 py-2 rounded-xl bg-slate-700/70 hover:bg-slate-600/70 text-slate-200 text-sm"
+        >
+          Log Out
+        </button>
       </div>
     </header>
   );
