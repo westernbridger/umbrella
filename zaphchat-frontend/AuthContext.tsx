@@ -48,11 +48,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       body: JSON.stringify({ email, password }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
+    if (!res.ok || data.success === false) {
       throw new Error(data.message || 'Login failed');
     }
     setToken(data.token);
     setUser(data.user);
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   };
 
   const register = async (name: string, email: string, password: string) => {
