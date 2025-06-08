@@ -7,7 +7,8 @@ import { PageProps, Layouts, Layout } from '../../types';
 import { MessageSquareIcon, UsersIcon, SettingsIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, RobotIcon } from '../icons'; // Removed ServerIcon as it's no longer used here
 import BotManager from '../BotManager';
 import BroadcastModal from '../BroadcastModal';
-import WeatherDateTimeWidget from '../WeatherDateTimeWidget'; 
+import WeatherDateTimeWidget from '../WeatherDateTimeWidget';
+import { useAuth } from '../../AuthContext';
 // Conceptually import react-grid-layout. In a real project: npm install react-grid-layout @types/react-grid-layout
 import { Responsive, WidthProvider } from 'react-grid-layout';
 
@@ -77,6 +78,7 @@ const DeployedBotStatusIndicator: React.FC<{ status: string }> = ({ status }) =>
 
 
 const DashboardPage: React.FC<PageProps> = () => {
+  const { user } = useAuth();
   const [layouts, setLayouts] = useState<Layouts>(() => {
     try {
       const savedLayouts = localStorage.getItem(DASHBOARD_LAYOUT_KEY);
@@ -108,6 +110,16 @@ const DashboardPage: React.FC<PageProps> = () => {
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const openBotManager = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowBotManager(true);
+  };
+
+  const openBroadcast = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowBroadcast(true);
+  };
 
   const onLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
     // Before saving, ensure isResizable is correctly set from initialLayouts definition
@@ -175,7 +187,7 @@ const DashboardPage: React.FC<PageProps> = () => {
       cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
       rowHeight={80}
       onLayoutChange={onLayoutChange}
-      draggableCancel=".no-drag"
+      draggableCancel=".no-drag,button"
       // isDraggable is now controlled per item in the layout definition
     >
       <div key="welcome">
@@ -185,7 +197,9 @@ const DashboardPage: React.FC<PageProps> = () => {
         >
             <div className="flex justify-between items-start mb-2">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-100">Welcome back, Jane Doe!</h2>
+                    <h2 className="text-3xl font-bold text-slate-100">
+                      {user?.displayName ? `Welcome back, ${user.displayName}!` : 'Welcome back!'}
+                    </h2>
                     <p className="text-base text-slate-400 mt-1">
                         Here's your personalized overview and current conditions.
                     </p>
@@ -259,11 +273,11 @@ const DashboardPage: React.FC<PageProps> = () => {
         <GlassCard title="Deployed Bots" className="h-full flex flex-col">
             <div className="flex-grow overflow-y-auto space-y-3">
                 {deployedBots.map(bot => (
-                    <div key={bot.id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
+                    <div key={bot._id || bot.id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
                         <div className="flex items-center">
                             <RobotIcon className="w-7 h-7 mr-3 text-cyan-400 flex-shrink-0" />
                             <div>
-                                <p className="text-slate-100 font-medium">{bot.botName}</p>
+                                <p className="text-slate-100 font-medium">{bot.botName || bot.name}</p>
                             </div>
                         </div>
                         <DeployedBotStatusIndicator status={bot.status} />
@@ -271,7 +285,7 @@ const DashboardPage: React.FC<PageProps> = () => {
                 ))}
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
-            <PremiumButton variant="secondary" className="no-drag w-full mt-4 !text-sm" onClick={() => setShowBotManager(true)}>Manage All Bots</PremiumButton>
+            <PremiumButton variant="secondary" className="no-drag w-full mt-4 !text-sm" onClick={openBotManager}>Manage All Bots</PremiumButton>
         </GlassCard>
       </div>
       
@@ -282,13 +296,13 @@ const DashboardPage: React.FC<PageProps> = () => {
             </div>
             <div className="flex flex-wrap gap-3 mt-auto">
                 <PremiumButton
-                    onClick={() => setShowBotManager(true)}
+                    onClick={openBotManager}
                     icon={<SettingsIcon className="w-5 h-5 mr-2"/>}
-                    className="no-drag flex-1 min-w-[8rem] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
+                    className="no-drag flex-1 w-full min-w-[8rem] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
                 >
                     Manage Bot
                 </PremiumButton>
-                <PremiumButton variant="secondary" className="no-drag flex-1 min-w-[8rem]" onClick={() => setShowBroadcast(true)}>
+                <PremiumButton variant="secondary" className="no-drag flex-1 w-full min-w-[8rem]" onClick={openBroadcast}>
                     New Broadcast
                 </PremiumButton>
             </div>
