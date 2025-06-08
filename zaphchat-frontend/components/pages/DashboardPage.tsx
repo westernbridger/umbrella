@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { api } from '../../api';
 import GlassCard from '../GlassCard';
 import PremiumButton from '../PremiumButton';
 import { PageProps, Layouts, Layout } from '../../types';
@@ -60,20 +61,7 @@ const initialLayouts: Layouts = {
 };
 
 
-const recentActivityItems = [
-  { user: 'Bot', action: 'Sent scheduled message to "Marketing Team"', time: '2m ago', avatarSeed: 'bot', status: 'success' },
-  { user: 'Alice', action: 'Joined "Project X" group', time: '5m ago', avatarSeed: 'alice', status: 'info' },
-  { user: 'Bot', action: 'Error processing command from "Support Chat"', time: '10m ago', avatarSeed: 'bot', status: 'error' },
-  { user: 'Bob', action: 'Sent message in "General Discussion"', time: '15m ago', avatarSeed: 'bob', status: 'message' },
-  { user: 'System', action: 'User "Charlie" permissions updated', time: '30m ago', avatarSeed: 'system', status: 'info' },
-  { user: 'Eve', action: 'Updated profile picture', time: '45m ago', avatarSeed: 'eve', status: 'info' },
-];
-
-const deployedBotsData = [
-    { id: 'bot1', name: 'Main Assistant', status: 'Online', avatarSeed: 'mainbot' },
-    { id: 'bot2', name: 'Support Bot Alpha', status: 'Offline', avatarSeed: 'supportbot' },
-    { id: 'bot3', name: 'Sales Lead Gen (Beta)', status: 'Syncing', avatarSeed: 'salesbot' },
-];
+// Data loaded from API
 
 const DeployedBotStatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   let color = 'bg-slate-500'; 
@@ -109,6 +97,13 @@ const DashboardPage: React.FC<PageProps> = () => {
     return initialLayouts;
   });
   const [isActivityExpanded, setIsActivityExpanded] = useState(true);
+  const [messageVolume, setMessageVolume] = useState<number | null>(null);
+  const [activeUserCount, setActiveUserCount] = useState<number | null>(null);
+  const [scheduledTaskCount, setScheduledTaskCount] = useState<number | null>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [deployedBots, setDeployedBots] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const onLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
     // Before saving, ensure isResizable is correctly set from initialLayouts definition
@@ -133,7 +128,39 @@ const DashboardPage: React.FC<PageProps> = () => {
     }
   };
 
-  const activityItemsToShow = isActivityExpanded ? recentActivityItems : recentActivityItems.slice(0, 3);
+  useEffect(() => {
+    async function load() {
+      try {
+        const [msg, users, tasks, activity, bots] = await Promise.all([
+          api.getMessagesToday().catch(() => ({ count: 0 })),
+          api.getActiveUsers().catch(() => ({ count: 0 })),
+          api.getTasks().catch(() => []),
+          api.getActivity().catch(() => []),
+          api.getBots().catch(() => []),
+        ]);
+        setMessageVolume(msg.count);
+        setActiveUserCount(users.count);
+        setScheduledTaskCount(Array.isArray(tasks) ? tasks.length : tasks.count);
+        setRecentActivity(activity);
+        setDeployedBots(bots);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const activityItemsToShow = isActivityExpanded ? recentActivity : recentActivity.slice(0, 3);
+
+  if (loading) {
+    return <GlassCard className="m-4"><p className="text-slate-300">Loading...</p></GlassCard>;
+  }
+
+  if (error) {
+    return <GlassCard className="m-4"><p className="text-red-400">{error}</p></GlassCard>;
+  }
 
   return (
     <ResponsiveGridLayout
@@ -166,29 +193,24 @@ const DashboardPage: React.FC<PageProps> = () => {
 
       {/* Server Status card removed */}
       <div key="statMessageVolume">
-        <StatCard 
-          title="Message Volume (Today)" 
-          value="1,284" 
-          trend="+12% vs yesterday" 
-          trendType="positive" 
-          icon={<MessageSquareIcon className="w-6 h-6" />} 
+        <StatCard
+          title="Message Volume (Today)"
+          value={messageVolume !== null ? messageVolume.toString() : '...'}
+          icon={<MessageSquareIcon className="w-6 h-6" />}
         />
       </div>
       <div key="statActiveUsers">
-        <StatCard 
-          title="Active Users (24h)" 
-          value="72" 
-          trend="-3% vs yesterday" 
-          trendType="negative" 
-          icon={<UsersIcon className="w-6 h-6" />} 
+        <StatCard
+          title="Active Users (24h)"
+          value={activeUserCount !== null ? activeUserCount.toString() : '...'}
+          icon={<UsersIcon className="w-6 h-6" />}
         />
       </div>
       <div key="statScheduledTasks">
-        <StatCard 
-          title="Scheduled Tasks" 
-          value="5 Upcoming" 
+        <StatCard
+          title="Scheduled Tasks"
+          value={scheduledTaskCount !== null ? `${scheduledTaskCount} Upcoming` : '...'}
           icon={<ClockIcon className="w-6 h-6" />}
-          footer="Next run: 10:00 AM" 
         />
       </div>
 
@@ -230,7 +252,7 @@ const DashboardPage: React.FC<PageProps> = () => {
       <div key="deployedBots">
         <GlassCard title="Deployed Bots" className="h-full flex flex-col">
             <div className="flex-grow overflow-y-auto space-y-3">
-                {deployedBotsData.map(bot => (
+                {deployedBots.map(bot => (
                     <div key={bot.id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
                         <div className="flex items-center">
                             <RobotIcon className="w-7 h-7 mr-3 text-cyan-400 flex-shrink-0" />
@@ -241,7 +263,7 @@ const DashboardPage: React.FC<PageProps> = () => {
                         <DeployedBotStatusIndicator status={bot.status} />
                     </div>
                 ))}
-                {deployedBotsData.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
+                {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
             <PremiumButton variant="secondary" className="w-full mt-4 !text-sm">Manage All Bots</PremiumButton>
         </GlassCard>
