@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PremiumButton from './PremiumButton';
 import GlassCard from './GlassCard';
+import Modal from './Modal';
 import { useAuth } from '../AuthContext';
 import { api, apiFetch } from '../api';
 
@@ -29,8 +30,8 @@ const AccountSettings: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <GlassCard className="w-full max-w-md">
+    <Modal onClose={onClose} containerClassName="w-full max-w-md">
+      <GlassCard className="w-full">
         <h2 className="text-xl font-semibold text-slate-100 mb-4">Account Settings</h2>
         <div className="space-y-3">
           <input className="w-full bg-slate-700/60 px-3 py-2 rounded" value={name} onChange={e=>setName(e.target.value)} placeholder="Name" />
@@ -45,7 +46,7 @@ const AccountSettings: React.FC<Props> = ({ onClose }) => {
           <PremiumButton onClick={save}>Save</PremiumButton>
         </div>
       </GlassCard>
-    </div>
+    </Modal>
   );
 };
 

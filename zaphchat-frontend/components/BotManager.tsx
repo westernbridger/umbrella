@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import GlassCard from './GlassCard';
 import PremiumButton from './PremiumButton';
+import Modal from './Modal';
 import { api } from '../api';
 import { Bot } from '../types';
 import { EditIcon, TrashIcon } from './icons';
@@ -34,8 +35,8 @@ const BotManager: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-auto p-4">
-      <GlassCard className="w-full max-w-2xl">
+    <Modal onClose={onClose} containerClassName="w-full max-w-2xl overflow-auto">
+      <GlassCard className="w-full">
         <h2 className="text-xl font-semibold text-slate-100 mb-4">Manage Bots</h2>
         {editing ? (
           <div className="space-y-2">
@@ -74,7 +75,7 @@ const BotManager: React.FC<Props> = ({ onClose }) => {
           </>
         )}
       </GlassCard>
-    </div>
+    </Modal>
   );
 };
 

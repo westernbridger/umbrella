@@ -173,8 +173,9 @@ const DashboardPage: React.FC<PageProps> = () => {
       layouts={layouts}
       breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
       cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-      rowHeight={80} 
+      rowHeight={80}
       onLayoutChange={onLayoutChange}
+      draggableCancel=".no-drag"
       // isDraggable is now controlled per item in the layout definition
     >
       <div key="welcome">
@@ -262,7 +263,7 @@ const DashboardPage: React.FC<PageProps> = () => {
                         <div className="flex items-center">
                             <RobotIcon className="w-7 h-7 mr-3 text-cyan-400 flex-shrink-0" />
                             <div>
-                                <p className="text-slate-100 font-medium">{bot.name}</p>
+                                <p className="text-slate-100 font-medium">{bot.botName}</p>
                             </div>
                         </div>
                         <DeployedBotStatusIndicator status={bot.status} />
@@ -270,7 +271,7 @@ const DashboardPage: React.FC<PageProps> = () => {
                 ))}
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
-            <PremiumButton variant="secondary" className="w-full mt-4 !text-sm" onClick={() => setShowBotManager(true)}>Manage All Bots</PremiumButton>
+            <PremiumButton variant="secondary" className="no-drag w-full mt-4 !text-sm" onClick={() => setShowBotManager(true)}>Manage All Bots</PremiumButton>
         </GlassCard>
       </div>
       
@@ -279,15 +280,15 @@ const DashboardPage: React.FC<PageProps> = () => {
             <div className="flex-grow">
               <p className="text-slate-300 mb-4">Manage your bot settings or start a new interaction.</p>
             </div>
-            <div className="space-y-3 mt-auto">
+            <div className="flex flex-wrap gap-3 mt-auto">
                 <PremiumButton
                     onClick={() => setShowBotManager(true)}
                     icon={<SettingsIcon className="w-5 h-5 mr-2"/>}
-                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
+                    className="no-drag flex-1 min-w-[8rem] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
                 >
                     Manage Bot
                 </PremiumButton>
-                <PremiumButton variant="secondary" className="w-full" onClick={() => setShowBroadcast(true)}>
+                <PremiumButton variant="secondary" className="no-drag flex-1 min-w-[8rem]" onClick={() => setShowBroadcast(true)}>
                     New Broadcast
                 </PremiumButton>
             </div>
