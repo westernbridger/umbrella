@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import GlassCard from './GlassCard';
 import PremiumButton from './PremiumButton';
+import Modal from './Modal';
 import { api, apiFetch } from '../api';
 import { Bot } from '../types';
 
@@ -24,8 +25,8 @@ const BroadcastModal: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <GlassCard className="w-full max-w-md">
+    <Modal onClose={onClose} containerClassName="w-full max-w-md">
+      <GlassCard className="w-full">
         <h2 className="text-xl font-semibold text-slate-100 mb-4">New Broadcast</h2>
         <select className="w-full bg-slate-700/60 px-2 py-1 rounded mb-2" value={botId} onChange={e=>setBotId(e.target.value)}>
           <option value="">Select Bot</option>
@@ -38,7 +39,7 @@ const BroadcastModal: React.FC<Props> = ({ onClose }) => {
           <PremiumButton onClick={send}>Send</PremiumButton>
         </div>
       </GlassCard>
-    </div>
+    </Modal>
   );
 };
 

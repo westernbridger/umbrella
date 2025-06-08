@@ -54,7 +54,7 @@ const App: React.FC = () => {
     if (selectedNavItem) {
       setActivePageId(selectedNavItem.id);
       setPageTitle(selectedNavItem.name);
-      if (isSidebarOpen && !window.matchMedia(LG_BREAKPOINT).matches) { // Close only if manually opened on small screens
+      if (!window.matchMedia(LG_BREAKPOINT).matches) {
         setIsSidebarOpen(false);
       }
     }
