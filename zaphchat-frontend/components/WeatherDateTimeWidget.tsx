@@ -12,61 +12,52 @@ const WeatherDateTimeWidget: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // --- Mock Geolocation and Weather Fetch ---
-    const mockFetchWeather = (lat?: number, lon?: number) => {
-      console.log('Mock fetching weather for:', lat, lon);
-      // Simulate API call delay
-      setTimeout(() => {
-        const now = new Date();
-        const hour = now.getHours();
-        const isDay = hour > 6 && hour < 20; // Simple day/night
-        
-        // Mock conditions based on time or random
-        let tempCondition: string;
-        let tempIconCode: string;
-        const randomFactor = Math.random();
+    const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+    if (!apiKey) return;
 
-        if (randomFactor < 0.6) { // Sunny/Clear
-            tempCondition = isDay ? "Sunny" : "Clear";
-            tempIconCode = isDay ? "01d" : "01n";
-        } else if (randomFactor < 0.85) { // Cloudy
-            tempCondition = "Cloudy";
-            tempIconCode = "02d"; // Generic cloudy
-        } else if (randomFactor < 0.95) { // Rain
-            tempCondition = "Light Rain";
-            tempIconCode = "10d";
-        } else { // Snow
-            tempCondition = "Snow Showers";
-            tempIconCode = "13d";
+    const cacheKey = 'weatherDataCache';
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < 15 * 60 * 1000) {
+          setWeatherData(parsed.data);
+          return;
         }
+      } catch {/* ignore corrupted cache */}
+    }
 
-        setWeatherData({
-          temperature: Math.floor(15 + Math.random() * 10), // Random temp between 15-25C
-          condition: tempCondition,
-          iconCode: tempIconCode,
-          locationName: lat && lon ? "Current Location" : "ZaphCity",
-          isDay: isDay,
-          sunrise: new Date(now.setHours(6,0,0,0)).getTime(), // Mock sunrise
-          sunset: new Date(now.setHours(20,0,0,0)).getTime(), // Mock sunset
-        });
-      }, 500);
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+        if (!res.ok) throw new Error('Failed request');
+        const data = await res.json();
+        const formatted: WeatherData = {
+          temperature: Math.round(data.main.temp),
+          condition: data.weather[0].description,
+          iconCode: data.weather[0].icon,
+          locationName: data.name,
+          isDay: data.weather[0].icon.includes('d'),
+          sunrise: data.sys.sunrise * 1000,
+          sunset: data.sys.sunset * 1000,
+        };
+        setWeatherData(formatted);
+        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: formatted }));
+      } catch (err) {
+        console.warn('Weather fetch failed', err);
+        setWeatherData(prev => ({ ...(prev || {} as WeatherData), error: 'Unable to retrieve weather.' }));
+      }
     };
+
+    const fallback = () => fetchWeather(45.5, -73.4);
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          mockFetchWeather(position.coords.latitude, position.coords.longitude);
-        },
-        (error) => {
-          console.warn("Geolocation error:", error.message);
-          mockFetchWeather(); // Fetch with default location if geolocation fails
-          setWeatherData(prev => ({...(prev || {} as WeatherData), error: "Could not get location. Showing default weather."}));
-        }
+        pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+        () => fallback()
       );
     } else {
-      console.warn("Geolocation not supported by this browser.");
-      mockFetchWeather(); // Fetch with default location
-      setWeatherData(prev => ({...(prev || {} as WeatherData), error: "Geolocation not supported. Showing default weather."}));
+      fallback();
     }
   }, []);
 

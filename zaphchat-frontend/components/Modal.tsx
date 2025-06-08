@@ -20,12 +20,12 @@ const Modal: React.FC<ModalProps> = ({ onClose, children, containerClassName = '
 
   return (
     <div
-      className={`fixed inset-0 bg-black/50 flex items-center justify-center overflow-y-auto p-4 sm:p-8 z-50 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
       onClick={close}
     >
       <div
         onClick={e => e.stopPropagation()}
-        className={`transform transition-transform duration-300 ${visible ? 'translate-y-0 scale-100' : '-translate-y-4 scale-95'} ${containerClassName}`}
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-4 sm:p-8 overflow-y-auto max-h-[90vh] transform transition-transform duration-300 ${visible ? 'scale-100' : 'scale-95'} ${containerClassName}`}
       >
         {children}
       </div>
@@ -34,3 +34,4 @@ const Modal: React.FC<ModalProps> = ({ onClose, children, containerClassName = '
 };
 
 export default Modal;
+
