@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from './api';
 
 interface AuthContextProps {
   token: string | null;
   user: any | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     name: string,
@@ -15,7 +17,8 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('token');
@@ -23,21 +26,40 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return null;
   });
   const [user, setUser] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
-    localStorage.setItem('token', token);
-    if (!user) {
-      fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => setUser(data.user))
-        .catch(() => {
-          setToken(null);
-          setUser(null);
-          localStorage.removeItem('token');
+    const initialize = async () => {
+      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!storedToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${storedToken}` },
         });
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+        setToken(storedToken);
+        setUser(data.user);
+      } catch (err) {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
     }
   }, [token]);
 
@@ -51,11 +73,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     if (!res.ok || data.success === false) {
       throw new Error(data.message || 'Login failed');
     }
+    localStorage.setItem('token', data.token);
     setToken(data.token);
     setUser(data.user);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
-    }
   };
 
   const register = async (name: string, email: string, password: string) => {
@@ -72,15 +92,20 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
     }
+    setToken(null);
+    setUser(null);
+    navigate('/login');
   };
 
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen text-slate-100">Loading...</div>;
+  }
+
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
