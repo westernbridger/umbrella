@@ -59,23 +59,33 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
+
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
-    const match = await user.comparePassword(password);
+
+    const bcrypt = require('bcrypt');
+    const match = await bcrypt.compare(password, user.password);
     if (!match) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not defined');
+      return res.status(500).json({ success: false, message: 'Server error' });
+    }
+
     const token = generateToken(user);
-    const userData = user.toObject();
-    delete userData.password;
-    res.json({ token, user: userData });
+    const { email: userEmail, displayName, role } = user;
+    res.json({ success: true, token, user: { email: userEmail, displayName, role } });
   } catch (err) {
-    res.status(500).json({ message: 'Login failed' });
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
