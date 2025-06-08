@@ -274,10 +274,10 @@ const DashboardPage: React.FC<PageProps> = () => {
             <div className="flex-grow overflow-y-auto space-y-3">
                 {deployedBots.map(bot => (
                     <div key={bot._id || bot.id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
-                        <div className="flex items-center">
+                        <div className="flex items-center min-w-0">
                             <RobotIcon className="w-7 h-7 mr-3 text-cyan-400 flex-shrink-0" />
-                            <div>
-                                <p className="text-slate-100 font-medium">{bot.botName || bot.name}</p>
+                            <div className="min-w-0">
+                                <p className="text-slate-100 font-medium truncate">{bot.name || bot.botName}</p>
                             </div>
                         </div>
                         <DeployedBotStatusIndicator status={bot.status} />
@@ -294,16 +294,16 @@ const DashboardPage: React.FC<PageProps> = () => {
             <div className="flex-grow">
               <p className="text-slate-300 mb-4">Manage your bot settings or start a new interaction.</p>
             </div>
-            <div className="flex flex-wrap gap-3 mt-auto">
+            <div className="flex flex-col sm:flex-row gap-3 mt-auto">
                 <PremiumButton
                     onClick={openBotManager}
                     icon={<SettingsIcon className="w-5 h-5 mr-2"/>}
                     className="no-drag flex-1 w-full min-w-[8rem] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
                 >
-                    Manage Bot
+                    <span className="truncate">Manage Bot</span>
                 </PremiumButton>
                 <PremiumButton variant="secondary" className="no-drag flex-1 w-full min-w-[8rem]" onClick={openBroadcast}>
-                    New Broadcast
+                    <span className="truncate">New Broadcast</span>
                 </PremiumButton>
             </div>
         </GlassCard>
