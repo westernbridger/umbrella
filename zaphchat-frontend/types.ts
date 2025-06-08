@@ -41,3 +41,15 @@ export interface WeatherData {
   sunset?: number; // timestamp
   error?: string;
 }
+
+export interface Bot {
+  _id?: string;
+  botName: string;
+  phoneNumber: string;
+  whatsappId: string;
+  status: 'online' | 'paused' | 'archived';
+  personality: string;
+  contacts: { name: string; phoneNumber: string }[];
+  conversations: any[];
+  messages: any[];
+}

@@ -5,6 +5,8 @@ import GlassCard from '../GlassCard';
 import PremiumButton from '../PremiumButton';
 import { PageProps, Layouts, Layout } from '../../types';
 import { MessageSquareIcon, UsersIcon, SettingsIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, RobotIcon } from '../icons'; // Removed ServerIcon as it's no longer used here
+import BotManager from '../BotManager';
+import BroadcastModal from '../BroadcastModal';
 import WeatherDateTimeWidget from '../WeatherDateTimeWidget'; 
 // Conceptually import react-grid-layout. In a real project: npm install react-grid-layout @types/react-grid-layout
 import { Responsive, WidthProvider } from 'react-grid-layout';
@@ -102,6 +104,8 @@ const DashboardPage: React.FC<PageProps> = () => {
   const [scheduledTaskCount, setScheduledTaskCount] = useState<number | null>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [deployedBots, setDeployedBots] = useState<any[]>([]);
+  const [showBotManager, setShowBotManager] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,10 +136,10 @@ const DashboardPage: React.FC<PageProps> = () => {
     async function load() {
       try {
         const [msg, users, tasks, activity, bots] = await Promise.all([
-          api.getMessagesToday().catch(() => ({ count: 0 })),
+          api.getMessageStats().catch(() => ({ count: 0 })),
           api.getActiveUsers().catch(() => ({ count: 0 })),
-          api.getTasks().catch(() => []),
-          api.getActivity().catch(() => []),
+          api.getSchedulerTasks().catch(() => []),
+          api.getRecentActivity().catch(() => []),
           api.getBots().catch(() => []),
         ]);
         setMessageVolume(msg.count);
@@ -265,7 +269,7 @@ const DashboardPage: React.FC<PageProps> = () => {
                 ))}
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
-            <PremiumButton variant="secondary" className="w-full mt-4 !text-sm">Manage All Bots</PremiumButton>
+            <PremiumButton variant="secondary" className="w-full mt-4 !text-sm" onClick={() => setShowBotManager(true)}>Manage All Bots</PremiumButton>
         </GlassCard>
       </div>
       
@@ -275,19 +279,22 @@ const DashboardPage: React.FC<PageProps> = () => {
               <p className="text-slate-300 mb-4">Manage your bot settings or start a new interaction.</p>
             </div>
             <div className="space-y-3 mt-auto">
-                <PremiumButton 
+                <PremiumButton
+                    onClick={() => setShowBotManager(true)}
                     icon={<SettingsIcon className="w-5 h-5 mr-2"/>}
                     className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 focus:ring-purple-500/50 hover:shadow-[0_0_20px_0px_rgba(168,85,247,0.5)]"
                 >
                     Manage Bot
                 </PremiumButton>
-                 <PremiumButton variant="secondary" className="w-full">
+                <PremiumButton variant="secondary" className="w-full" onClick={() => setShowBroadcast(true)}>
                     New Broadcast
                 </PremiumButton>
             </div>
         </GlassCard>
       </div>
     </ResponsiveGridLayout>
+    {showBotManager && <BotManager onClose={() => setShowBotManager(false)} />}
+    {showBroadcast && <BroadcastModal onClose={() => setShowBroadcast(false)} />}
   );
 };
 
