@@ -5,12 +5,14 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const apiRoutes = require('../routes/api');
+const authRoutes = require('../routes/auth');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // ---- Express API Setup ----
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 
 const PORT = process.env.API_PORT || 3001;

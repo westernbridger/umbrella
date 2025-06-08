@@ -1,4 +1,6 @@
 const express = require('express');
+const auth = require('../middleware/auth');
+const isAdmin = require('../middleware/isAdmin');
 const router = express.Router();
 
 // API routes providing bot statistics and actions.
@@ -6,7 +8,7 @@ const router = express.Router();
 // supply real metrics when available.
 
 // TODO: Replace stub data with real bot metrics
-router.get('/status', (req, res) => {
+router.get('/status', auth, (req, res) => {
   res.json({ online: true, uptime: '12h 15m', activeGroups: 3 });
 });
 
@@ -16,6 +18,11 @@ router.get('/messages/today', (req, res) => {
 
 router.get('/users/active', (req, res) => {
   res.json({ count: 24 });
+});
+
+// Example protected route
+router.get('/protected', auth, (req, res) => {
+  res.json({ message: `Hello ${req.user.displayName || req.user.email}` });
 });
 
 router.get('/activity', (req, res) => {
@@ -29,7 +36,7 @@ router.get('/activity', (req, res) => {
   res.json(events);
 });
 
-router.post('/bot/restart', (req, res) => {
+router.post('/bot/restart', auth, isAdmin, (req, res) => {
   console.log('Bot restart requested');
   // TODO: hook into actual bot restart logic
   res.json({ ok: true });
