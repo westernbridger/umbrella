@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const logFile = path.join(__dirname, '../logs/pm2-actions.log');
+const { logEvent } = require('../utils/logEvent');
+const Activity = require('../models/Activity');
 
 function logAction(user, action, error) {
   const line = `${new Date().toISOString()} ${user.email} ${action} ${error ? 'ERROR: ' + error : 'OK'}\n`;
@@ -56,37 +58,39 @@ router.get('/protected', auth, (req, res) => {
 });
 
 router.get('/activity/recent', auth, async (req, res) => {
-  const bots = await Bot.find({ owner: req.user._id });
-  let messages = [];
-  bots.forEach(b => {
-    if (Array.isArray(b.messages)) {
-      messages = messages.concat(b.messages);
-    }
-  });
-  messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  res.json(messages.slice(0, 10));
+  const events = await Activity.find()
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .populate('user', 'displayName email');
+  res.json(events);
 });
 
-router.post('/bot/start', auth, isAdmin, (req, res) => {
-  exec('pm2 start bot/openwa.js --name zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
-    logAction(req.user, 'start', err?.message);
-    if (err) return res.status(500).json({ success: false, error: stderr });
+router.post('/bot/start', auth, isAdmin, async (req, res) => {
+  exec('pm2 start bot/openwa.js --name zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot started');
+    const io = req.app.get('io');
+    if (io) io.emit('activity', event);
     res.json({ success: true });
   });
 });
 
-router.post('/bot/stop', auth, isAdmin, (req, res) => {
-  exec('pm2 stop zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
-    logAction(req.user, 'stop', err?.message);
-    if (err) return res.status(500).json({ success: false, error: stderr });
+router.post('/bot/stop', auth, isAdmin, async (req, res) => {
+  exec('pm2 stop zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot stopped');
+    const io = req.app.get('io');
+    if (io) io.emit('activity', event);
     res.json({ success: true });
   });
 });
 
-router.post('/bot/restart', auth, isAdmin, (req, res) => {
-  exec('pm2 restart zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
-    logAction(req.user, 'restart', err?.message);
-    if (err) return res.status(500).json({ success: false, error: stderr });
+router.post('/bot/restart', auth, isAdmin, async (req, res) => {
+  exec('pm2 restart zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot restarted');
+    const io = req.app.get('io');
+    if (io) io.emit('activity', event);
     res.json({ success: true });
   });
 });

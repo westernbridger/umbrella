@@ -3,7 +3,8 @@ import PremiumButton from './PremiumButton';
 import GlassCard from './GlassCard';
 import Modal from './Modal';
 import { useAuth } from '../AuthContext';
-import { api, apiFetch } from '../api';
+import { api } from '../api';
+import { useToast } from './ToastProvider';
 
 interface Props { onClose: () => void; }
 
@@ -15,17 +16,18 @@ const AccountSettings: React.FC<Props> = ({ onClose }) => {
   const [website, setWebsite] = useState(user?.website || '');
   const [password, setPassword] = useState('');
   const [oldPassword, setOldPassword] = useState('');
+  const { updateUser } = useAuth();
+  const { addToast } = useToast();
 
   const save = async () => {
     try {
-      await apiFetch('/users/me', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, website, password, oldPassword }),
-      });
+      const data = await api.updateAccount({ displayName: name, email, password, oldPassword });
+      updateUser(data.user);
+      addToast('Account updated');
       onClose();
     } catch (err) {
       console.error(err);
+      addToast('Update failed');
     }
   };
 
