@@ -24,6 +24,7 @@
     "which": "^5.0.0"
   },
   "scripts": {
-    "start": "node bot/openwa.js"
+    "start": "node server.js",
+    "bot": "node bot/openwa.js"
   }
 }
