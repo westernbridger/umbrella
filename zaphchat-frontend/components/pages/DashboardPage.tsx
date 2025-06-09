@@ -3,7 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
 import GlassCard from '../GlassCard';
 import PremiumButton from '../PremiumButton';
-import { PageProps, Layouts, Layout } from '../../types';
+import {
+  PageProps,
+  Layouts,
+  Layout,
+  ActivityItem,
+  Bot,
+  MessageStatsResponse,
+  ActiveUsersResponse,
+  ScheduledTask,
+  ServerStatusResponse,
+} from '../../types';
 import { MessageSquareIcon, UsersIcon, SettingsIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, RobotIcon } from '../icons'; // Removed ServerIcon as it's no longer used here
 import BotManager from '../BotManager';
 import BroadcastModal from '../BroadcastModal';
@@ -109,8 +119,8 @@ const DashboardPage: React.FC<PageProps> = () => {
   const [messageVolume, setMessageVolume] = useState<number | null>(null);
   const [activeUserCount, setActiveUserCount] = useState<number | null>(null);
   const [scheduledTaskCount, setScheduledTaskCount] = useState<number | null>(null);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [deployedBots, setDeployedBots] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [deployedBots, setDeployedBots] = useState<Bot[]>([]);
   const [pm2Status, setPm2Status] = useState<string>('unknown');
   const [showBotManager, setShowBotManager] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -127,7 +137,7 @@ const DashboardPage: React.FC<PageProps> = () => {
     setShowBroadcast(true);
   };
 
-  const onLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
+  const onLayoutChange = (_layout: Layout[], allLayouts: Layouts) => {
     // Before saving, ensure isResizable is correctly set from initialLayouts definition
     // This is important if react-grid-layout tries to infer it.
     const layoutsToSave: Layouts = {};
@@ -153,7 +163,14 @@ const DashboardPage: React.FC<PageProps> = () => {
   useEffect(() => {
     async function load() {
       try {
-        const [msg, users, tasks, activity, bots, status] = await Promise.all([
+        const [msg, users, tasks, activity, bots, status]: [
+          MessageStatsResponse,
+          ActiveUsersResponse,
+          ScheduledTask[],
+          ActivityItem[],
+          Bot[],
+          ServerStatusResponse,
+        ] = await Promise.all([
           api.getMessageStats().catch(() => ({ count: 0 })),
           api.getActiveUsers().catch(() => ({ count: 0 })),
           api.getSchedulerTasks().catch(() => []),
@@ -163,7 +180,7 @@ const DashboardPage: React.FC<PageProps> = () => {
         ]);
         setMessageVolume(msg.count);
         setActiveUserCount(users.count);
-        setScheduledTaskCount(Array.isArray(tasks) ? tasks.length : tasks.count);
+        setScheduledTaskCount(tasks.length);
         setRecentActivity(activity);
         setDeployedBots(bots);
         setPm2Status(status.status);
@@ -296,11 +313,11 @@ const DashboardPage: React.FC<PageProps> = () => {
         <GlassCard title="Deployed Bots" className="h-full flex flex-col">
             <div className="flex-grow overflow-y-auto space-y-3">
                 {deployedBots.map(bot => (
-                    <div key={bot._id || bot.id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
+                    <div key={bot._id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
                         <div className="flex items-center min-w-0">
                             <RobotIcon className="w-7 h-7 mr-3 text-cyan-400 flex-shrink-0" />
                             <div className="min-w-0">
-                                <p className="text-slate-100 font-medium truncate">{bot.name || bot.botName}</p>
+                                <p className="text-slate-100 font-medium truncate">{bot.botName}</p>
                             </div>
                         </div>
                         <DeployedBotStatusIndicator status={bot.status} />
