@@ -13,6 +13,7 @@ interface AuthContextProps {
     password: string
   ) => Promise<{ success: boolean; message: string; user?: any }>;
   logout: () => void;
+  updateUser: (data: any) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -100,12 +101,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login');
   };
 
+  const updateUser = (data: any) => {
+    setUser(prev => prev ? { ...prev, ...data } : prev);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen text-slate-100">Loading...</div>;
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

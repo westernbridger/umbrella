@@ -1,6 +1,8 @@
 const express = require('express');
 const Bot = require('../models/Bot');
 const auth = require('../middleware/auth');
+const { exec } = require('child_process');
+const { logEvent } = require('../utils/logEvent');
 
 const router = express.Router();
 
@@ -49,6 +51,57 @@ router.delete('/:id', auth, async (req, res) => {
   const bot = await Bot.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
   if (!bot) return res.status(404).json({ message: 'Bot not found' });
   res.json({ success: true });
+});
+
+router.post('/:id/start', auth, async (req, res) => {
+  const bot = await Bot.findOne({ _id: req.params.id, owner: req.user._id });
+  if (!bot) return res.status(404).json({ message: 'Bot not found' });
+  exec('pm2 start bot/openwa.js --name zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    bot.status = 'online';
+    await bot.save();
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot started', { botId: bot._id });
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('botStatus', { id: bot._id, status: bot.status });
+      io.emit('activity', event);
+    }
+    res.json({ success: true, status: bot.status });
+  });
+});
+
+router.post('/:id/stop', auth, async (req, res) => {
+  const bot = await Bot.findOne({ _id: req.params.id, owner: req.user._id });
+  if (!bot) return res.status(404).json({ message: 'Bot not found' });
+  exec('pm2 stop zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    bot.status = 'paused';
+    await bot.save();
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot stopped', { botId: bot._id });
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('botStatus', { id: bot._id, status: bot.status });
+      io.emit('activity', event);
+    }
+    res.json({ success: true, status: bot.status });
+  });
+});
+
+router.post('/:id/restart', auth, async (req, res) => {
+  const bot = await Bot.findOne({ _id: req.params.id, owner: req.user._id });
+  if (!bot) return res.status(404).json({ message: 'Bot not found' });
+  exec('pm2 restart zaphar-bot', { windowsHide: true }, async (err) => {
+    if (err) return res.status(500).json({ success: false });
+    bot.status = 'online';
+    await bot.save();
+    const event = await logEvent('SERVER_EVENT', req.user._id, 'Bot restarted', { botId: bot._id });
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('botStatus', { id: bot._id, status: bot.status });
+      io.emit('activity', event);
+    }
+    res.json({ success: true, status: bot.status });
+  });
 });
 
 module.exports = router;

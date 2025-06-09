@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const path = require('path');
 const apiRoutes = require('./routes/api');
@@ -14,13 +16,20 @@ app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 app.use('/api/bots', botRoutes);
 
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+app.set('io', io);
+io.on('connection', socket => {
+  console.log('client connected');
+});
+
 async function start() {
   const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) throw new Error('MONGODB_URI is not defined in .env');
   await mongoose.connect(mongoUri, {});
   console.log('MongoDB Connected');
   const PORT = process.env.API_PORT || 3001;
-  app.listen(PORT, () => console.log(`[API] Listening on port ${PORT}`));
+  server.listen(PORT, () => console.log(`[API] Listening on port ${PORT}`));
 }
 
 start().catch((err) => {

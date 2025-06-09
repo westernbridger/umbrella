@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { api } from '../../api';
+import { api, API_BASE_URL } from '../../api';
+import { useNavigate } from 'react-router-dom';
 import GlassCard from '../GlassCard';
 import PremiumButton from '../PremiumButton';
 import {
@@ -15,6 +16,7 @@ import {
   ServerStatusResponse,
 } from '../../types';
 import { MessageSquareIcon, UsersIcon, SettingsIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, ChevronDownIcon, ChevronUpIcon, RobotIcon } from '../icons'; // Removed ServerIcon as it's no longer used here
+import { io } from 'socket.io-client';
 import BotManager from '../BotManager';
 import BroadcastModal from '../BroadcastModal';
 import WeatherDateTimeWidget from '../WeatherDateTimeWidget';
@@ -52,7 +54,6 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 8, y: 2, w: 4, h: 2, isResizable: false, isDraggable: true },
     { i: 'recentActivity', x: 0, y: 4, w: 7, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 7, y: 4, w: 5, h: 3, isResizable: false, isDraggable: true },
-    { i: 'botProcess', x: 7, y: 7, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'quickActions', x: 7, y: 7, w: 5, h: 2, isResizable: false, isDraggable: true },
   ],
   md: [ // 10 columns, rowHeight 80px
@@ -62,7 +63,6 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 5, y: 4, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'recentActivity', x: 0, y: 6, w: 10, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 0, y: 11, w: 5, h: 4, isResizable: false, isDraggable: true },
-    { i: 'botProcess', x: 5, y: 11, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'quickActions', x: 5, y: 11, w: 5, h: 4, isResizable: false, isDraggable: true },
   ],
   sm: [ // 6 columns, rowHeight 80px
@@ -72,7 +72,6 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 0, y: 4, w: 6, h: 2, isResizable: false, isDraggable: true }, // Full width
     { i: 'recentActivity', x: 0, y: 6, w: 6, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 0, y: 11, w: 6, h: 4, isResizable: false, isDraggable: true },
-    { i: 'botProcess', x: 0, y: 15, w: 6, h: 2, isResizable: false, isDraggable: true },
     { i: 'quickActions', x: 0, y: 15, w: 6, h: 3, isResizable: false, isDraggable: true },
   ],
 };
@@ -121,7 +120,6 @@ const DashboardPage: React.FC<PageProps> = () => {
   const [scheduledTaskCount, setScheduledTaskCount] = useState<number | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [deployedBots, setDeployedBots] = useState<Bot[]>([]);
-  const [pm2Status, setPm2Status] = useState<string>('unknown');
   const [showBotManager, setShowBotManager] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -135,6 +133,35 @@ const DashboardPage: React.FC<PageProps> = () => {
   const openBroadcast = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowBroadcast(true);
+  };
+
+  const navigate = useNavigate();
+
+  const handleStart = async (bot: Bot) => {
+    try {
+      await api.startBot(bot._id!);
+      setDeployedBots(prev => prev.map(b => b._id === bot._id ? { ...b, status: 'online' } : b));
+    } catch {
+      addToast('Start failed');
+    }
+  };
+
+  const handleStop = async (bot: Bot) => {
+    try {
+      await api.stopBot(bot._id!);
+      setDeployedBots(prev => prev.map(b => b._id === bot._id ? { ...b, status: 'paused' } : b));
+    } catch {
+      addToast('Stop failed');
+    }
+  };
+
+  const handleRestart = async (bot: Bot) => {
+    try {
+      await api.restartBot(bot._id!);
+      setDeployedBots(prev => prev.map(b => b._id === bot._id ? { ...b, status: 'online' } : b));
+    } catch {
+      addToast('Restart failed');
+    }
   };
 
   const onLayoutChange = (_layout: Layout[], allLayouts: Layouts) => {
@@ -176,14 +203,12 @@ const DashboardPage: React.FC<PageProps> = () => {
           api.getSchedulerTasks().catch(() => []),
           api.getRecentActivity().catch(() => []),
           api.getBots().catch(() => []),
-          api.getServerStatus().catch(() => ({ status: 'error' })),
         ]);
         setMessageVolume(msg.count);
         setActiveUserCount(users.count);
         setScheduledTaskCount(tasks.length);
         setRecentActivity(activity);
         setDeployedBots(bots);
-        setPm2Status(status.status);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -194,19 +219,16 @@ const DashboardPage: React.FC<PageProps> = () => {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    const check = async () => {
-      try {
-        const s = await api.getServerStatus();
-        if (mounted) setPm2Status(s.status);
-      } catch {
-        if (mounted) setPm2Status('error');
-      }
-    };
-    const id = setInterval(check, 10000);
-    check();
-    return () => { mounted = false; clearInterval(id); };
+    const socket = io(API_BASE_URL.replace('/api', ''));
+    socket.on('botStatus', data => {
+      setDeployedBots(prev => prev.map(b => b._id === data.id ? { ...b, status: data.status } : b));
+    });
+    socket.on('activity', (ev: any) => {
+      setRecentActivity(prev => [ev, ...prev.slice(0, 49)]);
+    });
+    return () => { socket.close(); };
   }, []);
+
 
   const activityItemsToShow = isActivityExpanded ? recentActivity : recentActivity.slice(0, 3);
 
@@ -320,33 +342,20 @@ const DashboardPage: React.FC<PageProps> = () => {
                                 <p className="text-slate-100 font-medium truncate">{bot.botName}</p>
                             </div>
                         </div>
-                        <DeployedBotStatusIndicator status={bot.status} />
+                        <div className="flex items-center space-x-2">
+                            <DeployedBotStatusIndicator status={bot.status} />
+                            <button onClick={() => handleStart(bot)} className="text-green-400 hover:text-green-300">Start</button>
+                            <button onClick={() => handleStop(bot)} className="text-red-400 hover:text-red-300">Stop</button>
+                            <button onClick={() => handleRestart(bot)} className="text-yellow-400 hover:text-yellow-300">Restart</button>
+                            <button onClick={() => navigate('/bot-management')} className="text-slate-300 hover:text-slate-100"><SettingsIcon className="w-5 h-5" /></button>
+                        </div>
                     </div>
                 ))}
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
-            <div className="mt-4">
-                <PremiumButton variant="secondary" className="no-drag w-full !text-sm" onClick={openBotManager}>Manage All Bots</PremiumButton>
-            </div>
         </GlassCard>
       </div>
 
-      <div key="botProcess">
-        <GlassCard title="Bot Process Control" className="h-full flex flex-col">
-          <p className="text-slate-300 mb-4">Current status: <span className="font-semibold">{pm2Status}</span></p>
-          <div className="mt-auto flex flex-wrap gap-2">
-            <PremiumButton className="flex-1 min-w-[6rem]" onClick={async () => {
-              try { await api.startBot(); addToast('Bot started'); } catch (e:any) { addToast('Start failed'); }
-            }}>Start</PremiumButton>
-            <PremiumButton variant="secondary" className="flex-1 min-w-[6rem]" onClick={async () => {
-              try { await api.stopBot(); addToast('Bot stopped'); } catch (e:any) { addToast('Stop failed'); }
-            }}>Stop</PremiumButton>
-            <PremiumButton variant="secondary" className="flex-1 min-w-[6rem]" onClick={async () => {
-              try { await api.restartBot(); addToast('Bot restarted'); } catch (e:any) { addToast('Restart failed'); }
-            }}>Restart</PremiumButton>
-          </div>
-        </GlassCard>
-      </div>
       
       <div key="quickActions">
         <GlassCard title="Quick Actions" className="h-full flex flex-col">

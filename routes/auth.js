@@ -4,6 +4,7 @@ const validator = require('validator');
 const User = require('../models/User');
 const Bot = require('../models/Bot');
 const auth = require('../middleware/auth');
+const { logEvent } = require('../utils/logEvent');
 
 const router = express.Router();
 
@@ -102,6 +103,9 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    const event = await logEvent('LOGIN', user._id, 'User logged in');
+    const io = req.app.get('io');
+    if (io) io.emit('activity', event);
     res.json({ success: true, token, user: { email: userEmail, displayName, role } });
   } catch (err) {
     console.error(err);
@@ -117,6 +121,31 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', auth, (req, res) => {
   res.json({ user: req.user });
+});
+
+router.put('/update', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const { displayName, email, password, oldPassword } = req.body;
+    if (displayName !== undefined) user.displayName = displayName;
+    if (email !== undefined) user.email = email;
+    if (password) {
+      if (!oldPassword || !(await user.comparePassword(oldPassword))) {
+        return res.status(400).json({ success: false, message: 'Invalid old password' });
+      }
+      user.password = password;
+    }
+    await user.save();
+    const updated = { email: user.email, displayName: user.displayName, role: user.role };
+    const event = await logEvent('SETTING_CHANGE', user._id, 'Account updated');
+    const io = req.app.get('io');
+    if (io) io.emit('activity', event);
+    res.json({ success: true, user: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Update failed' });
+  }
 });
 
 // Additional routes can be added here, e.g. password reset
