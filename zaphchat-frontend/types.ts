@@ -53,3 +53,33 @@ export interface Bot {
   conversations: any[];
   messages: any[];
 }
+
+export interface MessageStatsResponse {
+  count: number;
+}
+
+export interface ActiveUsersResponse {
+  count: number;
+}
+
+export interface ServerStatusResponse {
+  status: string;
+}
+
+export interface ActivityItem {
+  user: string;
+  action: string;
+  time: string;
+  status: 'success' | 'error' | 'pending';
+  avatarSeed: string;
+}
+
+export interface ScheduledTask {
+  _id?: string;
+  chatId: string;
+  prompt: string;
+  userId: string;
+  message: string;
+  scheduledTime: string;
+  sent: boolean;
+}
