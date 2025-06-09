@@ -2,23 +2,7 @@ const { create } = require('@open-wa/wa-automate');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-const express = require('express');
-const cors = require('cors');
-const apiRoutes = require('../routes/api');
-const authRoutes = require('../routes/auth');
-const botRoutes = require('../routes/bots');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
-// ---- Express API Setup ----
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use('/api/auth', authRoutes);
-app.use('/api', apiRoutes);
-app.use('/api/bots', botRoutes);
-
-const PORT = process.env.API_PORT || 3001;
-app.listen(PORT, () => console.log(`[API] Listening on port ${PORT}`));
 
 // TODO: Expose real data from the bot inside routes/api.js
 

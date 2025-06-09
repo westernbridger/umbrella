@@ -24,7 +24,7 @@ router.get('/ping', (req, res) => {
 });
 
 router.get('/status', auth, isAdmin, (req, res) => {
-  exec('pm2 jlist', (err, stdout) => {
+  exec('pm2 jlist', { windowsHide: true }, (err, stdout) => {
     if (err) return res.json({ status: 'error' });
     try {
       const list = JSON.parse(stdout);
@@ -68,7 +68,7 @@ router.get('/activity/recent', auth, async (req, res) => {
 });
 
 router.post('/bot/start', auth, isAdmin, (req, res) => {
-  exec('pm2 start bot/openwa.js --name zaphar-bot', (err, stdout, stderr) => {
+  exec('pm2 start bot/openwa.js --name zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
     logAction(req.user, 'start', err?.message);
     if (err) return res.status(500).json({ success: false, error: stderr });
     res.json({ success: true });
@@ -76,7 +76,7 @@ router.post('/bot/start', auth, isAdmin, (req, res) => {
 });
 
 router.post('/bot/stop', auth, isAdmin, (req, res) => {
-  exec('pm2 stop zaphar-bot', (err, stdout, stderr) => {
+  exec('pm2 stop zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
     logAction(req.user, 'stop', err?.message);
     if (err) return res.status(500).json({ success: false, error: stderr });
     res.json({ success: true });
@@ -84,7 +84,7 @@ router.post('/bot/stop', auth, isAdmin, (req, res) => {
 });
 
 router.post('/bot/restart', auth, isAdmin, (req, res) => {
-  exec('pm2 restart zaphar-bot', (err, stdout, stderr) => {
+  exec('pm2 restart zaphar-bot', { windowsHide: true }, (err, stdout, stderr) => {
     logAction(req.user, 'restart', err?.message);
     if (err) return res.status(500).json({ success: false, error: stderr });
     res.json({ success: true });
