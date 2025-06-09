@@ -9,6 +9,7 @@ import BotManager from '../BotManager';
 import BroadcastModal from '../BroadcastModal';
 import WeatherDateTimeWidget from '../WeatherDateTimeWidget';
 import { useAuth } from '../../AuthContext';
+import { useToast } from '../ToastProvider';
 // Conceptually import react-grid-layout. In a real project: npm install react-grid-layout @types/react-grid-layout
 import { Responsive, WidthProvider } from 'react-grid-layout';
 
@@ -41,6 +42,7 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 8, y: 2, w: 4, h: 2, isResizable: false, isDraggable: true },
     { i: 'recentActivity', x: 0, y: 4, w: 7, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 7, y: 4, w: 5, h: 3, isResizable: false, isDraggable: true },
+    { i: 'botProcess', x: 7, y: 7, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'quickActions', x: 7, y: 7, w: 5, h: 2, isResizable: false, isDraggable: true },
   ],
   md: [ // 10 columns, rowHeight 80px
@@ -50,6 +52,7 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 5, y: 4, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'recentActivity', x: 0, y: 6, w: 10, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 0, y: 11, w: 5, h: 4, isResizable: false, isDraggable: true },
+    { i: 'botProcess', x: 5, y: 11, w: 5, h: 2, isResizable: false, isDraggable: true },
     { i: 'quickActions', x: 5, y: 11, w: 5, h: 4, isResizable: false, isDraggable: true },
   ],
   sm: [ // 6 columns, rowHeight 80px
@@ -59,7 +62,8 @@ const initialLayouts: Layouts = {
     { i: 'statScheduledTasks', x: 0, y: 4, w: 6, h: 2, isResizable: false, isDraggable: true }, // Full width
     { i: 'recentActivity', x: 0, y: 6, w: 6, h: 5, isResizable: false, isDraggable: true }, // No longer resizable
     { i: 'deployedBots', x: 0, y: 11, w: 6, h: 4, isResizable: false, isDraggable: true },
-    { i: 'quickActions', x: 0, y: 15, w: 6, h: 3, isResizable: false, isDraggable: true }, 
+    { i: 'botProcess', x: 0, y: 15, w: 6, h: 2, isResizable: false, isDraggable: true },
+    { i: 'quickActions', x: 0, y: 15, w: 6, h: 3, isResizable: false, isDraggable: true },
   ],
 };
 
@@ -79,6 +83,7 @@ const DeployedBotStatusIndicator: React.FC<{ status: string }> = ({ status }) =>
 
 const DashboardPage: React.FC<PageProps> = () => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [layouts, setLayouts] = useState<Layouts>(() => {
     try {
       const savedLayouts = localStorage.getItem(DASHBOARD_LAYOUT_KEY);
@@ -106,6 +111,7 @@ const DashboardPage: React.FC<PageProps> = () => {
   const [scheduledTaskCount, setScheduledTaskCount] = useState<number | null>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [deployedBots, setDeployedBots] = useState<any[]>([]);
+  const [pm2Status, setPm2Status] = useState<string>('unknown');
   const [showBotManager, setShowBotManager] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -147,18 +153,20 @@ const DashboardPage: React.FC<PageProps> = () => {
   useEffect(() => {
     async function load() {
       try {
-        const [msg, users, tasks, activity, bots] = await Promise.all([
+        const [msg, users, tasks, activity, bots, status] = await Promise.all([
           api.getMessageStats().catch(() => ({ count: 0 })),
           api.getActiveUsers().catch(() => ({ count: 0 })),
           api.getSchedulerTasks().catch(() => []),
           api.getRecentActivity().catch(() => []),
           api.getBots().catch(() => []),
+          api.getServerStatus().catch(() => ({ status: 'error' })),
         ]);
         setMessageVolume(msg.count);
         setActiveUserCount(users.count);
         setScheduledTaskCount(Array.isArray(tasks) ? tasks.length : tasks.count);
         setRecentActivity(activity);
         setDeployedBots(bots);
+        setPm2Status(status.status);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -166,6 +174,21 @@ const DashboardPage: React.FC<PageProps> = () => {
       }
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      try {
+        const s = await api.getServerStatus();
+        if (mounted) setPm2Status(s.status);
+      } catch {
+        if (mounted) setPm2Status('error');
+      }
+    };
+    const id = setInterval(check, 10000);
+    check();
+    return () => { mounted = false; clearInterval(id); };
   }, []);
 
   const activityItemsToShow = isActivityExpanded ? recentActivity : recentActivity.slice(0, 3);
@@ -286,6 +309,23 @@ const DashboardPage: React.FC<PageProps> = () => {
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
             <PremiumButton variant="secondary" className="no-drag w-full mt-4 !text-sm" onClick={openBotManager}>Manage All Bots</PremiumButton>
+        </GlassCard>
+      </div>
+
+      <div key="botProcess">
+        <GlassCard title="Bot Process Control" className="h-full flex flex-col">
+          <p className="text-slate-300 mb-4">Current status: <span className="font-semibold">{pm2Status}</span></p>
+          <div className="mt-auto flex space-x-2">
+            <PremiumButton className="flex-1" onClick={async () => {
+              try { await api.startBot(); addToast('Bot started'); } catch (e:any) { addToast('Start failed'); }
+            }}>Start</PremiumButton>
+            <PremiumButton variant="secondary" className="flex-1" onClick={async () => {
+              try { await api.stopBot(); addToast('Bot stopped'); } catch (e:any) { addToast('Stop failed'); }
+            }}>Stop</PremiumButton>
+            <PremiumButton variant="secondary" className="flex-1" onClick={async () => {
+              try { await api.restartBot(); addToast('Bot restarted'); } catch (e:any) { addToast('Restart failed'); }
+            }}>Restart</PremiumButton>
+          </div>
         </GlassCard>
       </div>
       

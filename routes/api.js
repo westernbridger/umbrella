@@ -3,7 +3,16 @@ const auth = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
 const Bot = require('../models/Bot');
 const ScheduledMessage = require('../models/ScheduledMessage');
+const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
+const logFile = path.join(__dirname, '../logs/pm2-actions.log');
+
+function logAction(user, action, error) {
+  const line = `${new Date().toISOString()} ${user.email} ${action} ${error ? 'ERROR: ' + error : 'OK'}\n`;
+  fs.appendFile(logFile, line, () => {});
+}
 
 // API routes providing bot statistics and actions.
 // These return stub data for now; integrate with the WhatsApp bot to
@@ -14,8 +23,18 @@ router.get('/ping', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-router.get('/status', auth, (req, res) => {
-  res.json({ online: true });
+router.get('/status', auth, isAdmin, (req, res) => {
+  exec('pm2 jlist', (err, stdout) => {
+    if (err) return res.json({ status: 'error' });
+    try {
+      const list = JSON.parse(stdout);
+      const proc = list.find(p => p.name === 'zaphar-bot');
+      const status = proc ? proc.pm2_env.status : 'stopped';
+      res.json({ status });
+    } catch (e) {
+      res.json({ status: 'error' });
+    }
+  });
 });
 
 router.get('/stats/messages', auth, async (req, res) => {
@@ -48,10 +67,28 @@ router.get('/activity/recent', auth, async (req, res) => {
   res.json(messages.slice(0, 10));
 });
 
+router.post('/bot/start', auth, isAdmin, (req, res) => {
+  exec('pm2 start bot/openwa.js --name zaphar-bot', (err, stdout, stderr) => {
+    logAction(req.user, 'start', err?.message);
+    if (err) return res.status(500).json({ success: false, error: stderr });
+    res.json({ success: true });
+  });
+});
+
+router.post('/bot/stop', auth, isAdmin, (req, res) => {
+  exec('pm2 stop zaphar-bot', (err, stdout, stderr) => {
+    logAction(req.user, 'stop', err?.message);
+    if (err) return res.status(500).json({ success: false, error: stderr });
+    res.json({ success: true });
+  });
+});
+
 router.post('/bot/restart', auth, isAdmin, (req, res) => {
-  console.log('Bot restart requested');
-  // TODO: hook into actual bot restart logic
-  res.json({ ok: true });
+  exec('pm2 restart zaphar-bot', (err, stdout, stderr) => {
+    logAction(req.user, 'restart', err?.message);
+    if (err) return res.status(500).json({ success: false, error: stderr });
+    res.json({ success: true });
+  });
 });
 
 router.get('/scheduler/tasks', auth, async (req, res) => {

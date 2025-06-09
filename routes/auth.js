@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 const User = require('../models/User');
+const Bot = require('../models/Bot');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -82,6 +83,25 @@ router.post('/login', async (req, res) => {
 
     const token = generateToken(user);
     const { email: userEmail, displayName, role } = user;
+
+    // Auto-create default Zaphar bot for admin if none exists
+    if (role === 'admin') {
+      const existing = await Bot.findOne({ owner: user._id });
+      if (!existing) {
+        await Bot.create({
+          owner: user._id,
+          botName: 'Zaphar',
+          phoneNumber: '1-514-ZAPHAR',
+          whatsappId: '1201234567890123@c.us',
+          personality: "I'm Zaphar, your personal AI assistant for WhatsApp.",
+          status: 'online',
+          contacts: [],
+          conversations: [],
+          messages: []
+        });
+      }
+    }
+
     res.json({ success: true, token, user: { email: userEmail, displayName, role } });
   } catch (err) {
     console.error(err);

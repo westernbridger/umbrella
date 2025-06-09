@@ -3,6 +3,8 @@ baileys_auth/
 auth/
 .env
 package-lock.json
+logs/*
+!logs/.gitkeep
 
 # managed by open-wa
 **.data.json
