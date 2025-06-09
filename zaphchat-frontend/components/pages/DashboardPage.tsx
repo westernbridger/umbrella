@@ -311,7 +311,7 @@ const DashboardPage: React.FC<PageProps> = () => {
 
       <div key="deployedBots">
         <GlassCard title="Deployed Bots" className="h-full flex flex-col">
-            <div className="flex-grow overflow-y-auto space-y-3">
+            <div className="flex-grow overflow-y-auto space-y-3 pr-1">
                 {deployedBots.map(bot => (
                     <div key={bot._id} className="flex items-center justify-between p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60">
                         <div className="flex items-center min-w-0">
@@ -325,21 +325,23 @@ const DashboardPage: React.FC<PageProps> = () => {
                 ))}
                 {deployedBots.length === 0 && <p className="text-slate-400 text-center py-4">No bots deployed yet.</p>}
             </div>
-            <PremiumButton variant="secondary" className="no-drag w-full mt-4 !text-sm" onClick={openBotManager}>Manage All Bots</PremiumButton>
+            <div className="mt-4">
+                <PremiumButton variant="secondary" className="no-drag w-full !text-sm" onClick={openBotManager}>Manage All Bots</PremiumButton>
+            </div>
         </GlassCard>
       </div>
 
       <div key="botProcess">
         <GlassCard title="Bot Process Control" className="h-full flex flex-col">
           <p className="text-slate-300 mb-4">Current status: <span className="font-semibold">{pm2Status}</span></p>
-          <div className="mt-auto flex space-x-2">
-            <PremiumButton className="flex-1" onClick={async () => {
+          <div className="mt-auto flex flex-wrap gap-2">
+            <PremiumButton className="flex-1 min-w-[6rem]" onClick={async () => {
               try { await api.startBot(); addToast('Bot started'); } catch (e:any) { addToast('Start failed'); }
             }}>Start</PremiumButton>
-            <PremiumButton variant="secondary" className="flex-1" onClick={async () => {
+            <PremiumButton variant="secondary" className="flex-1 min-w-[6rem]" onClick={async () => {
               try { await api.stopBot(); addToast('Bot stopped'); } catch (e:any) { addToast('Stop failed'); }
             }}>Stop</PremiumButton>
-            <PremiumButton variant="secondary" className="flex-1" onClick={async () => {
+            <PremiumButton variant="secondary" className="flex-1 min-w-[6rem]" onClick={async () => {
               try { await api.restartBot(); addToast('Bot restarted'); } catch (e:any) { addToast('Restart failed'); }
             }}>Restart</PremiumButton>
           </div>
@@ -351,7 +353,7 @@ const DashboardPage: React.FC<PageProps> = () => {
             <div className="flex-grow">
               <p className="text-slate-300 mb-4">Manage your bot settings or start a new interaction.</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mt-auto">
                 <PremiumButton
                     onClick={openBotManager}
                     icon={<SettingsIcon className="w-5 h-5 mr-2"/>}
