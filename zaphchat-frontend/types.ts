@@ -67,7 +67,7 @@ export interface ServerStatusResponse {
 }
 
 export interface ActivityItem {
-  user: string;
+  user: string | { displayName?: string; email?: string };
   action: string;
   time: string;
   status: 'success' | 'error' | 'pending';

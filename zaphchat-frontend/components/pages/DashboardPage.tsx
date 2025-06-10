@@ -319,7 +319,10 @@ const DashboardPage: React.FC<PageProps> = () => {
                 <li key={i} className="flex items-center p-3 bg-slate-700/40 rounded-xl hover:bg-slate-700/60 transition-colors duration-200">
                   <img src={`https://picsum.photos/seed/${activity.avatarSeed}/40/40`} alt="User" className="w-10 h-10 rounded-full mr-4 border-2 border-purple-500/60" />
                   <div className="flex-1">
-                    <p className="text-slate-200 font-medium">{activity.user}: <span className="text-slate-300 font-normal">{activity.action}</span></p>
+                    <p className="text-slate-200 font-medium">
+                      {typeof activity.user === 'object' ? (activity.user.displayName || activity.user.email) : activity.user}:
+                      <span className="text-slate-300 font-normal">{activity.action}</span>
+                    </p>
                     <p className="text-xs text-slate-400">{activity.time}</p>
                   </div>
                   {activity.status === 'error' && <AlertTriangleIcon className="w-5 h-5 text-red-500 ml-2" />}
