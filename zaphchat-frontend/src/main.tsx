@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
 import { AuthProvider } from './AuthContext';
 import { ToastProvider } from './components/ToastProvider';
 import { BrowserRouter } from 'react-router-dom'; // ✅ import this
